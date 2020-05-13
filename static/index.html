@@ -1,0 +1,311 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.941176471, maximum-scale=1, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" 
+          integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+
+    <style>
+      .list-group-item {
+        padding: 1px;
+      }
+    </style>
+      
+
+  <script type="text/javascript" src="/js/reconnecting-websocket.min.js"></script>
+
+   <meta name="viewport" content="width=device-width, initial-scale=0.941176471, maximum-scale=1, user-scalable=no" />
+
+</head>
+<body id="__apm_media_player" onload="init();">
+  <div class="container-fluid">
+  <div class="form-group" style="margin: 4px;">
+    <label for="search">Search on YouTube</label>
+    <input type="text" id="search" name="search" required minlength="2" maxlength="80" size="40">
+  </div>
+  <div class="btn-group" role="group">
+       <button id=btn_search class="btn btn-primary" type="button" onclick="do_search('')">Search</button>
+       <button id=btn_prev class="btn btn-info" type="button" onclick="do_search(prevPageToken)">Search &lt;&lt;</button>
+       <button id=btn_next class="btn btn-info" type="button" onclick="do_search(nextPageToken)">Search &gt;&gt;</button>
+       <button id=btn_play class="btn btn-success" type="button" onclick="do_play_list()">Play</button>
+       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
+  </div>
+  <div class="input-group-prepend">
+    <span class="input-group-text">Current playing time:&nbsp</span>
+    <span class="input-group-text" id="current_time">Stopped</span>
+  </div>
+  <div id="shared-lists" class="row">
+    <!--h4 class="col-12">Shared lists</h4-->
+      <div id="search_res" class="list-group col">
+        <div class="list-group-item" id="Nby59SRBy44" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/Nby59SRBy44/default.jpg" style="width: 60px;">00:05:35 - Симфоническое Кино - Хочу перемен (Виктор Цой, Георгий Каспарян)</div>
+        <div class="list-group-item" id="Zot-Tu9IqHE" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/Zot-Tu9IqHE/default.jpg" style="width: 60px;" draggable="false">00:38:13 - Симфоническое КИНО на Дворцовой площади</div>
+        <div class="list-group-item" id="QraumoNvxBE" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/QraumoNvxBE/default.jpg" style="width: 60px;">01:08:57 - Концерт "Симфоническое КИНО" 16.10.14 Минск. Дворец Республики</div>
+        <div class="list-group-item" id="_ORQr7l5Ih8" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/_ORQr7l5Ih8/default.jpg" style="width: 60px;">01:30:18 - Симфоническое КИНО на крыше Roof Music</div>
+        <div class="list-group-item" id="beQnt4s8KBE" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/beQnt4s8KBE/default.jpg" style="width: 60px;">00:05:37 - Симфоническое Кино - Кончится лето (Виктор Цой, Георгий Каспарян)</div>
+    </div>
+
+    <div id="playlist" class="list-group col on">
+      
+    </div>  
+  </div>
+</div>
+  <script>
+  function uuidv4() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+  }
+  function pad(num, size){ return ('000000000' + num).substr(-size); }
+  function pad4(num){ return ('0000' + num).substr(-4); }
+
+  </script>
+
+  <script>
+      var ws;
+      var nextPageToken = "";
+      var playing_id = "";
+      var playList = [];
+      var stopSent = false;
+      var uuid = uuidv4();
+
+
+      function sec_to_time(s) {
+        function checkTime(i) {
+          return (i < 10) ? "0" + i : i;
+        }
+        h = checkTime(Math.floor(s / (60 * 60))),
+        m = checkTime(Math.floor((s % (60 * 60)) / 60)),
+        s = checkTime(s % 60);
+        return h + ":" + m + ":" + s;      }
+      function init() {
+        ws = new ReconnectingWebSocket("ws://192.168.0.1:9180/ws", null, {reconnectInterval: 5000, maxReconnectInterval: 15000} );
+        // Set event handlers.
+        var heartbeat;
+        ws.onopen = function() {
+          //output("onopen");
+          heartbeat = setInterval(function() {
+                msg = new ArrayBuffer(1)
+                msg[0] = 0;
+                ws.send(msg);
+          }, 20000);
+
+          get_playlist();
+          get_status();
+
+        };
+      
+        ws.onmessage = function(e) {
+          // e.data contains received string.
+          //output("onmessage: " + e.data);
+          switch(e.data.charAt(0)) {
+            case '0': // Titles
+              data = JSON.parse(e.data.substr(1));
+              nextPageToken = data.nextPageToken;
+              prevPageToken = data.prevPageToken;
+              document.getElementById("btn_next").disabled = nextPageToken == '';
+              document.getElementById("btn_prev").disabled = prevPageToken == '';
+              var pl = data.pl;
+              var snippet = '';
+              pl.forEach(element => {
+                  snippet += '<div class="list-group-item" id="' + element.id + '" ondblclick="do_dblclick(this)">'
+                      + '<img src="https://i.ytimg.com/vi/' + element.id + '/default.jpg" style="width: 60px;">'
+                      + sec_to_time(element.time) + ' - ' + element.title + '</div>';
+              });
+              document.getElementById("search_res").innerHTML = snippet;
+              //$("#search_res").html(snippet);
+              break;
+            case '1': // current time 
+              time = parseInt(e.data.substr(1));
+              document.getElementById("current_time").innerHTML = sec_to_time(time);
+              break;
+            case '2': // Playing was stopped
+              document.getElementById("current_time").innerHTML = 'Stopped';
+              higlight_by_id(playing_id, false);
+              do_play_next();
+              break;
+            case '3': // Status
+              data = JSON.parse(e.data.substr(1))
+              if (data.vid != "") {
+                playing_id = data.vid;
+                higlight_by_id(playing_id, true);
+                stopSent = false;
+              }
+              break;
+            case '4': // PLaylist update
+              data = JSON.parse(e.data.substr(1));
+              if (data.uuid == uuid) break; // Do not process if the playlist was sent from this window
+              else {
+                var pl = data.pl;
+                var snippet = '';
+                pl.forEach(element => {
+                  var vid = element.id.substr(4)
+                  snippet += '<div class="list-group-item" id="' + vid + '" ondblclick="do_dblclick(this)">'
+                      + '<img src="https://i.ytimg.com/vi/' + vid + '/default.jpg" style="width: 60px;">'
+                      + element.txt + '</div>';
+                });
+                document.getElementById("playlist").innerHTML = snippet;
+              }
+              break;
+            case '6': // Stop command
+              data = JSON.parse(e.data.substr(1));
+              stopSent = true;
+              break;
+          }
+        };
+      
+        ws.onclose = function() {
+          //output("onclose");
+          clearInterval(heartbeat);
+          $("#search_res").html("&nbsp");
+        };
+
+        ws.onerror = function(e) {
+          //output("onerror");
+          //console.log(e)
+        };
+     }
+
+    function do_search(pt) {
+      ws.send(JSON.stringify({ cmd: "search", title : document.getElementById("search").value, pagetoken : pt }));
+    }
+    function do_play(id) {
+      stopSent = false;
+      playing_id = id;
+      // higlight_by_id(playing_id, true);
+      ws.send(JSON.stringify({ cmd: "play", id : playing_id }));
+    }
+
+    function get_id_by_element(elem) {
+      var list = document.getElementById("playlist");
+      var pl = list.getElementsByTagName('*');
+      var i;
+      var c = 0;
+      for (i = 0; i < pl.length; ++i) {
+        var e = pl[i];
+        if (e.id == '') continue;
+        if (e == elem) {
+          return pad4(c)+e.id;
+        }
+        c++;
+      }
+      return "";
+    }
+
+    function get_element_by_id(p_id) {
+      var list = document.getElementById("playlist");
+      var pl = list.getElementsByTagName('*');
+      var i;
+      var c = 0;
+      for (i = 0; i < pl.length; ++i) {
+        var e = pl[i];
+        if (e.id == '') continue;
+        if (pad4(c)+e.id == p_id) {
+          return e;
+        }
+        c++;
+      }
+      return null;
+    }
+
+  function higlight_by_id(p_id, higlight) {
+    e = get_element_by_id(p_id);
+    if (e == null) 
+      return;
+    var cl = e.getAttribute('class')
+    if(higlight) {
+      if (!cl.includes('list-group-item-info')) {
+         cl += ' list-group-item-info';
+      }
+    } else {
+      cl = cl.replace(/\s*list-group-item-info/, "");
+    }
+    e.setAttribute('class', cl);
+  }
+
+  function do_play_list() {
+    PlayListUpdate();
+    if(playList.length == 0)
+      return;
+    do_play(playList[0].id)
+  }
+
+  function do_stop() {
+    ws.send(JSON.stringify({ cmd: "stop"}));
+    stopSent = true;
+  }
+
+  function do_play_next() {
+     var i;
+
+     if(stopSent) {
+       stopSent = false;
+       return;
+     }
+     PlayListUpdate();
+     for(i=0; i<playList.length; i++) {
+       if (playList[i].id == playing_id)
+           break;
+     }  
+     if (i < playList.length-1) {
+       // Play next track
+       do_play(playList[i+1].id);
+     }
+  }
+
+  function do_dblclick(e) {
+    PlayListUpdate();
+    var vid = get_id_by_element(e);
+    do_play(vid);
+  }
+
+  function get_status() {
+    ws.send(JSON.stringify({ cmd: "getStatus"}));
+  }
+
+  function get_playlist() {
+    ws.send(JSON.stringify({ cmd: "getPlaylist"}));
+  }
+
+
+</script>
+
+<script src="/js/Sortable.js"></script>
+<script>
+  s_search_res = new Sortable(search_res, {
+      group: 'shared', // set both lists to same group
+      animation: 150
+  });
+
+  s_playlist = new Sortable(playlist, {
+      group: 'shared',
+      animation: 150
+  });
+
+  document.getElementById("playlist").addEventListener('dragover', PlayListUpdate);
+  
+  function PlayListUpdate() {
+    playList = [];
+    var list = document.getElementById("playlist");
+    var pl = list.getElementsByTagName('*');
+    var i;
+    for (i = 0; i < pl.length; ++i) {
+        var e = pl[i];
+        if (e.id == '') continue;
+        var elem = {};
+        // First 4 digits are number in playlist to distinct between two items with the same vid
+        elem.id = pad4(playList.length) + e.id; 
+        elem.txt = e.innerText;
+        playList.push(elem);
+    }
+    ws.send(JSON.stringify({ cmd: "updatePlaylist", "uuid" : uuid, "pl" : playList}))
+
+  }
+
+
+
+</script>
+
+</body>
