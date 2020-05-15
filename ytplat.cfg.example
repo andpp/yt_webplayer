@@ -1,0 +1,8 @@
+[main]
+api_key=Your_Youtube_API_key
+port = 9180
+interface = 127.0.0.1
+max_search_results = 50
+playlist_folder = ./playlists
+domain = your.domain
+daemon = true

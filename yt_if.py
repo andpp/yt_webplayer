@@ -15,11 +15,7 @@ gi.require_version('GObject', '2.0')
 from gi.repository import GLib, GObject, Gst #, GstPbutils
 Gst.init(sys.argv)
 
-RSP_TITLES = '0'
-RSP_TIME = '1'
-RSP_END_TRACK = '2'
-RSP_STATUS = '3'
-
+from globalvars import GlobalVariables as g
 
 # def forward_callback(self, w):
 #         rc, pos_int = self.player.query_position(Gst.Format.TIME)
@@ -35,11 +31,48 @@ class VInfo:
     vid = ""
     title = ""
 
+class myMainLoop(GLib.MainLoop):
+    # Backwards compatible constructor API
+    def __new__(cls, context=None):
+        return GLib.MainLoop.new(context, False)
+
+    # Retain classic pygobject behaviour of quitting main loops on SIGINT
+    def __init__(self, context=None):
+        pass
+        # def _handler(loop):
+        #     loop.quit()
+        #     loop._quit_by_sigint = True
+        #     # We handle signal deletion in __del__, return True so GLib
+        #     # doesn't do the deletion for us.
+        #     return True
+
+        # if sys.platform != 'win32':
+        #     # compatibility shim, keep around until we depend on glib 2.36
+        #     if hasattr(GLib, 'unix_signal_add'):
+        #         fn = GLib.unix_signal_add
+        #     else:
+        #         fn = GLib.unix_signal_add_full
+        #     self._signal_source = fn(GLib.PRIORITY_DEFAULT, signal.SIGINT, _handler, self)
+
+    def __del__(self):
+        pass
+        # if hasattr(self, '_signal_source'):
+        #     GLib.source_remove(self._signal_source)
+
+    # def run(self):
+    #     super(MainLoop, self).run()
+    #     if hasattr(self, '_quit_by_sigint'):
+    #         # caught by _main_loop_sigint_handler()
+    #         raise KeyboardInterrupt
+
+
 class YT:
     played = False
     cb = None
     ioloop = None
-    stop_thread = False
+
+    loop = None
+    pipeline = None
 
     # vinfo = {
     #     "position" : 0,
@@ -56,7 +89,7 @@ class YT:
 
     @classmethod
     def on_playing_finished(cls):
-        cls.played = True
+        # cls.played = True
         cls.vinfo.vid = ""
         cls.vinfo.title = ""
         cls.vinfo.position = 0
@@ -70,13 +103,20 @@ class YT:
         cls.vinfo.position = 0
         cls.vinfo.duration = 0
 
+    @classmethod
+    def fforward(cls, time):
+        rc, pos_int = cls.pipeline.query_position(Gst.Format.TIME)
+        seek_ns = pos_int + time * 1000000000
+        logging.info('Forward: %d ns -> %d ns' % (pos_int, seek_ns))
+        cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
 
     @classmethod
     def bus_call(cls, bus, message, loop):
         t = message.type
         if t == Gst.MessageType.EOS:
             #sys.stdout.write("End-of-stream\n")
-            cls.on_playing_finished(cls)
+            cls.played = True
+            cls.on_playing_finished()
             loop.quit()
             if cls.ioloop:
                 # Send signal that playing was stopped
@@ -84,23 +124,14 @@ class YT:
         elif t == Gst.MessageType.ERROR:
             err, debug = message.parse_error()
             #sys.stderr.write("Error: %s ::: %s\n" % (err, debug))
-
-            cls.on_playing_finished(cls)
+            cls.on_playing_finished()
             loop.quit()
         return True
 
     @classmethod
     def one_second_tick(cls, loop, pipeline):
-        if cls.stop_thread:
-            logging.info("Stopping inside thread")
-            cls.stop_thread = False
-            loop.quit()
-            if cls.ioloop:
-                # Send signal that playing was stopped
-                cls.ioloop.add_callback(cls.cb, RSP_END_TRACK)
-
+        if not loop.is_running():
             return False
-
         _, cls.vinfo.position = pipeline.query_position(Gst.Format.TIME)
         if cls.vinfo.position == -1:
             return False
@@ -108,14 +139,15 @@ class YT:
         # print("\rPosition: %s of %s" % (Gst.TIME_ARGS(position).split('.',1)[0], 
         #                 Gst.TIME_ARGS(duration).split('.',1)[0]), end ="")
         if cls.ioloop:
-            cls.ioloop.add_callback(cls.cb, RSP_TIME + "%d" % int(cls.vinfo.position/1000000000))
+            cls.ioloop.add_callback(cls.cb, g.RSP_TIME + "%d %d" % (int(cls.vinfo.position/1000000000),
+                                                                    int(cls.vinfo.duration/1000000000)))
 
         return True
 
     @classmethod
     def search(cls, yt_title, nextPageToken = None, prevPageToken = None):
         #a=pafy.call_gdata('search', {'q':'Инструментальное кино Цой', 'maxResults': 50, 'part': 'id,snippet'})
-        yt_q =  {'q':yt_title, 'maxResults': 5, 'part': 'id'}
+        yt_q =  {'q':yt_title, 'maxResults': g.maxSearchResults, 'part': 'id'}
         if nextPageToken and nextPageToken != "":
             yt_q["pageToken"] = nextPageToken
         if prevPageToken and prevPageToken != "":
@@ -168,8 +200,8 @@ class YT:
             else:
                 duration = 30
 
-        #    title=snippet.get('localized', {'title':snippet.get('title',
-        #                                                 '[!!!]')}).get('title', '[!]'),
+            # title=snippet.get('localized', {'title':snippet.get('title',
+            #                                   '[!!!]')}).get('title', '[!]'),
 
             title = snippet.get('title', '').strip()
             result.append({"id" : vid, "title" : title, "time": duration})
@@ -182,39 +214,43 @@ class YT:
         cls.cb = cb
         cls.ioloop = ioloop
 
-        count = 0
-        while not YT.played and count < 5:
-            passed = False
-            pcnt = 0
-            while not passed and pcnt < 5:
+        for cnt in range(3):
+            for pcnt in range(3):
                 try:
                     video = pafy.new('youtube.com/watch?v=' + vid[4:])
-                    passed = True
                 except:
-                    pcnt +=1
+                    pass
 
             s = video.getbestaudio()
             #print(s.bitrate, s.extension)
 
             # Gst.Pipeline
-            pipeline = Gst.parse_launch('uridecodebin uri="' + s.url + '" ! audioconvert ! audioresample ! ' \
+            cls.pipeline = Gst.parse_launch('uridecodebin uri="' + s.url + '" ! audioconvert ! audioresample ! ' \
             'audio/x-raw,rate=48000,channels=2 ! audioconvert ! rtpL16pay ! queue ! udpsink clients=127.0.0.1:10001')
 
-            bus = pipeline.get_bus()
+            bus = cls.pipeline.get_bus()
             bus.add_signal_watch()
 
             cls.on_playing_started(vid, video.title)
-            pipeline.set_state(Gst.State.PLAYING)
+            cls.pipeline.set_state(Gst.State.PLAYING)
 
-            loop = GLib.MainLoop()
-            GLib.timeout_add_seconds(1, YT.one_second_tick, loop, pipeline)
-            bus.connect ("message", YT.bus_call, loop)
-            loop.run()
-            pipeline.set_state(Gst.State.NULL)
-            pipeline.get_state(Gst.CLOCK_TIME_NONE)
+            # cls.loop = GLib.MainLoop()
+            cls.loop = myMainLoop()
+            GLib.timeout_add_seconds(1, YT.one_second_tick, cls.loop, cls.pipeline)
+            bus.connect ("message", YT.bus_call, cls.loop)
+            try:
+                cls.loop.run()
+            except KeyboardInterrupt:
+                YT.played = True
+
+            cls.pipeline.set_state(Gst.State.NULL)
+            cls.pipeline.get_state(Gst.CLOCK_TIME_NONE)
 
             cls.on_playing_finished()
+            if YT.played:
+                break
 
+            cls.loop = None
                 
 
 

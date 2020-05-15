@@ -14,45 +14,195 @@
         padding: 1px;
       }
     </style>
-      
 
   <script type="text/javascript" src="/js/reconnecting-websocket.min.js"></script>
+  <script type="text/javascript" src="/js/Sortable.min.js"></script>
+
+  <!-- This is the base CSS theme for the APM Media Player -->
+  <link href="/APM/skin/apmplayer_base.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="/APM/skin/jquery-ui-slider.custom.css" type="text/css" media="all" />
+
+  <!--script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script-->
+  <!--script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script-->
+  <!--script type="text/javascript" src="/APM/script/lib/jquery.1.11.0.min.js"></script-->
+  <script type="text/javascript" src="/APM/script/lib/jquery.2.1.0.min.js"></script>
+  <script type="text/javascript" src="/APM/script/lib/jquery-ui-slider-1.10.4.custom.min.js"></script>
+  <!--script type="text/javascript" src="/APM/script/lib/modernizr-2.5.3-custom.min.js"></script-->
+  <!--script type="text/javascript" src="/APM/script/lib/soundmanager2-jsmin.js"></script-->
+  <script type="text/javascript" src="/APM/script/lib/soundmanager2-nodebug-jsmin.js"></script>
+  <!--script type="text/javascript" src="/APM/script/apmplayer.js"></script>
+  <script type="text/javascript" src="/APM/script/apmplayer_ui.jquery.js"></script-->
+  <script type="text/javascript" src="/APM/script/apmplayer-all.min.js"></script>
+  <!-- end NOTE -->
+
+  <script>
+    // AMP player support function
+      $(document).ready(function(){
+        $('#apm_media_wrapper').apmplayer_ui({
+            settings : {
+              volume : 1.0,
+              //autoplay : true,
+              fetchMetadata : false
+            },
+            playables : [
+                {
+                    identifier: 'mopidy',
+                    type : 'live_audio',
+                    title: 'Mopidy live streaming',
+                    program: 'Mopidy Stream',
+                    //flash_server_url : 'rtmp://wowza.stream.publicradio.org/kcmp',
+                    //flash_file_path : 'kcmp.stream',
+                    //http_file_path : stream_name(),
+                    http_file_path : '/stream',
+                    buffer_time : 6
+                }
+            ],
+        });
+    });
+  </script>
 
    <meta name="viewport" content="width=device-width, initial-scale=0.941176471, maximum-scale=1, user-scalable=no" />
 
 </head>
 <body id="__apm_media_player" onload="init();">
   <div class="container-fluid">
-  <div class="form-group" style="margin: 4px;">
-    <label for="search">Search on YouTube</label>
+
+    <div id="apm_media_wrapper" class="clearfix preroll-inactive" style="width:auto;">
+      <div id="apm_player_status" class="rounded box" style="margin-top: unset;"></div>
+      <div id="apm_player_controls" class="volume playtime" style="left:10px;">
+          <div id="apm_player_toggle">
+              <div id="apm_player_play" class="player-toggle hide-text">Play</div>
+              <div id="apm_player_pause" class="player-toggle hide-text">Pause</div>
+              <div id="apm_player_bar_wrapper">
+                  <div id="apm_player_bar_container" class="rounded">
+                      <div id="apm_player_bar">
+                          <div id="apm_player_loading" class="rounded4"></div>
+                      </div>
+                  </div>
+                  <div id="apm_player_playtime">0:00</div>
+              </div>
+              <div id="apm_player_volume_wrapper">
+                  <div id="apm_player_volume_status">
+                  </div>
+                  <div id="apm_player_volume_slider_wrapper">
+                      <div id="apm_player_volume_slider_container" class="rounded">
+                          <div id="apm_volume_bar">
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </div>
+    <!-- END Player Container -->
+
+    <div class="input-group-prepend" style="position:fixed;top: 9px;left:340px">
+      <span class="input-group-text small" id="current_time" style="font-size: x-small;">Stopped</span>
+    </div>
+    
+    <div class="btn-group" role="group" style="position:fixed;top: 45px;">
+      <button id=btn_search class="btn btn-primary" type="button" data-toggle="modal" data-target="#searchDialog" onclick="hide_all_popups()">Search</button>
+      <button id=btn_play class="btn btn-success" type="button" onclick="do_play_playList()">Play</button>
+      <button id=btn_ff60 class="btn btn-info" type="button" onclick="do_fforward(60)">1m &gt;&gt;</button>
+      <button id=btn_ff300 class="btn btn-info" type="button" onclick="do_fforward(300)">5m &gt;&gt;</button>
+      <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
+      <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
+      <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
+    </div>
+    <div id="shared-lists" class="row" style="position:fixed;top: 80px;width:100%;height: auto;bottom:5px;">
+      <!--h4 class="col-12">Shared lists</h4-->
+      <div id="playlist" class="list-group col on jumbotron1" style="max-height:100%;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
+      </div>  
+
+      <div id="search_res" class="list-group col" style="max-height:100%;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <!-- Open Playlist Dialog -->
+  <div class="modal" id="openPLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title" id="exampleModalLongTitle">Load playlist</h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+          <div class="modal-body listgroup jumbotron1" id="loadPlaylistList" style="max-height:300px;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
+            
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Dialog -->
+  <div class="modal" id="savePLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title" id="exampleModalLongTitle">Save playlist</h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <div class="modal-body listgroup jumbotron1" id="savePLaylistList" style="max-height:300px;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
+           
+        </div>
+      
+  <div class="modal-body form-group" style="margin: 4px;">
+    <label for="listTitle">List</label>
+    <input type="text" id="listTitle" name="listTitle" required minlength="2" maxlength="80" size="40">
+  </div>
+
+        <div class="modal-footer btn-group" role="group">
+          <button type="button" class="btn btn-primary" onclick="do_save_pl($('#listTitle').val());$('#listTitle').val('')";>Save</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>  
+
+  <!-- Search Dialog -->
+  <div class="modal" id="searchDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title" id="exampleModalLongTitle">Load playlist</h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+  <div class="modal-body form-group" style="margin: 4px;">
+    <label for="search">Search</label>
     <input type="text" id="search" name="search" required minlength="2" maxlength="80" size="40">
   </div>
-  <div class="btn-group" role="group">
-       <button id=btn_search class="btn btn-primary" type="button" onclick="do_search('')">Search</button>
-       <button id=btn_prev class="btn btn-info" type="button" onclick="do_search(prevPageToken)">Search &lt;&lt;</button>
-       <button id=btn_next class="btn btn-info" type="button" onclick="do_search(nextPageToken)">Search &gt;&gt;</button>
-       <button id=btn_play class="btn btn-success" type="button" onclick="do_play_list()">Play</button>
-       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
-  </div>
-  <div class="input-group-prepend">
-    <span class="input-group-text">Current playing time:&nbsp</span>
-    <span class="input-group-text" id="current_time">Stopped</span>
-  </div>
-  <div id="shared-lists" class="row">
-    <!--h4 class="col-12">Shared lists</h4-->
-      <div id="search_res" class="list-group col">
-        <div class="list-group-item" id="Nby59SRBy44" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/Nby59SRBy44/default.jpg" style="width: 60px;">00:05:35 - Симфоническое Кино - Хочу перемен (Виктор Цой, Георгий Каспарян)</div>
-        <div class="list-group-item" id="Zot-Tu9IqHE" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/Zot-Tu9IqHE/default.jpg" style="width: 60px;" draggable="false">00:38:13 - Симфоническое КИНО на Дворцовой площади</div>
-        <div class="list-group-item" id="QraumoNvxBE" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/QraumoNvxBE/default.jpg" style="width: 60px;">01:08:57 - Концерт "Симфоническое КИНО" 16.10.14 Минск. Дворец Республики</div>
-        <div class="list-group-item" id="_ORQr7l5Ih8" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/_ORQr7l5Ih8/default.jpg" style="width: 60px;">01:30:18 - Симфоническое КИНО на крыше Roof Music</div>
-        <div class="list-group-item" id="beQnt4s8KBE" ondblclick="do_dblclick(this)"><img src="https://i.ytimg.com/vi/beQnt4s8KBE/default.jpg" style="width: 60px;">00:05:37 - Симфоническое Кино - Кончится лето (Виктор Цой, Георгий Каспарян)</div>
+        <div class="modal-footer btn-group" role="group">
+          <button type="button" class="btn btn-primary"onclick="do_search('')">Search</button>
+          <button id=btn_prev class="btn btn-info" type="button" onclick="do_search(prevPageToken)">&lt;&lt;S</button>
+          <button id=btn_next class="btn btn-info" type="button" onclick="do_search(nextPageToken)">S&gt;&gt;</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
-
-    <div id="playlist" class="list-group col on">
-      
-    </div>  
   </div>
-</div>
+
+  <script>
+    s_search_res = new Sortable(search_res, {
+        group: 'shared', // set both lists to same group
+        animation: 150
+    });
+
+    s_playlist = new Sortable(playlist, {
+        group: 'shared',
+        animation: 150
+    });
+  </script>
+
+
   <script>
   function uuidv4() {
     return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
@@ -61,7 +211,76 @@
   function pad(num, size){ return ('000000000' + num).substr(-size); }
   function pad4(num){ return ('0000' + num).substr(-4); }
 
+  var rightClickEl = null;
+
+$('.jumbotron1').on('contextmenu', function(e) {
+  hide_all_popups();
+  var top;
+  var left;
+  rightClickEl = e.toElement;
+  if (rightClickEl.parentElement.id == 'playlist') {
+    elem = "#pl-context-menu";
+    top = e.pageY - 100;
+    left = e.pageX;
+  } else if (rightClickEl.parentElement.id == 'loadPlaylistList') {
+    elem = "#loadpl-context-menu";
+    top = rightClickEl.offsetTop
+    left = e.offsetX + rightClickEl.offsetLeft
+  } else if (rightClickEl.parentElement.id == 'savePLaylistList') {
+    elem = "#savepl-context-menu";
+    top = rightClickEl.offsetTop
+    left = e.offsetX + rightClickEl.offsetLeft
+  } else {
+    return true;
+  }
+
+  $(elem).css({
+    display: "block",
+    top: top,
+    left: left,
+    background: '#295aa2',
+    'min-width': '0px',
+  }).addClass("show");
+  return false; //blocks default Webbrowser right click menu
+}).on("click", function() {
+  $(elem).removeClass("show").hide();
+});
+
+$("#pl-context-menu button").on("click", function() {
+  $(this).parent().removeClass("show").hide();
+});
+
+$("#loadpl-context-menu button").on("click", function() {
+  $(this).parent().removeClass("show").hide();
+});
+
+$("#savepl-context-menu button").on("click", function() {
+  $(this).parent().removeClass("show").hide();
+});
+
+$("#renamepl-context-menu button").on("click", function() {
+  $(this).parent().removeClass("show").hide();
+});
+
+function hide_all_popups() {
+  $("#pl-context-menu").removeClass("show").hide();
+  $("#loadpl-context-menu").removeClass("show").hide();
+  $("#savepl-context-menu").removeClass("show").hide();
+  $("#renamepl-context-menu").removeClass("show").hide();
+}
+
+
   </script>
+
+<div id="contextMenu" class="dropdown clearfix">
+  <div class="dropdown-menu">
+    <a class="dropdown-item" href="#">Action</a>
+    <a class="dropdown-item" href="#">Another action</a>
+    <a class="dropdown-item" href="#">Something else here</a>
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item" href="#">Separated link</a>
+  </div>
+</div>
 
   <script>
       var ws;
@@ -81,11 +300,10 @@
         s = checkTime(s % 60);
         return h + ":" + m + ":" + s;      }
       function init() {
-        ws = new ReconnectingWebSocket("ws://192.168.0.1:9180/ws", null, {reconnectInterval: 5000, maxReconnectInterval: 15000} );
+        ws = new ReconnectingWebSocket("wss://" + window.location.hostname + window.location.pathname + "ws", null, {reconnectInterval: 5000, maxReconnectInterval: 15000} );
         // Set event handlers.
         var heartbeat;
         ws.onopen = function() {
-          //output("onopen");
           heartbeat = setInterval(function() {
                 msg = new ArrayBuffer(1)
                 msg[0] = 0;
@@ -96,10 +314,13 @@
           get_status();
 
         };
+
+        ws.onerror = function(e) {
+          console.print(e);
+        }
       
         ws.onmessage = function(e) {
           // e.data contains received string.
-          //output("onmessage: " + e.data);
           switch(e.data.charAt(0)) {
             case '0': // Titles
               data = JSON.parse(e.data.substr(1));
@@ -118,8 +339,10 @@
               //$("#search_res").html(snippet);
               break;
             case '1': // current time 
-              time = parseInt(e.data.substr(1));
-              document.getElementById("current_time").innerHTML = sec_to_time(time);
+              s_times = e.data.substr(1).split(" ");
+              position = parseInt(s_times[0]);
+              duration = parseInt(s_times[1])
+              document.getElementById("current_time").innerHTML = sec_to_time(position) + ' of ' + sec_to_time(duration);
               break;
             case '2': // Playing was stopped
               document.getElementById("current_time").innerHTML = 'Stopped';
@@ -146,6 +369,11 @@
                       + '<img src="https://i.ytimg.com/vi/' + vid + '/default.jpg" style="width: 60px;">'
                       + element.txt + '</div>';
                 });
+                snippet += '<div class="dropdown-menu dropdown-menu-sm" id="pl-context-menu">' + 
+                              '<div class="container">' +       
+                                '<button class="btn btn-danger" type="button" onclick="do_delete_item()">Delete</button>'+
+                              '</div>' +
+                            '</div>';
                 document.getElementById("playlist").innerHTML = snippet;
               }
               break;
@@ -153,9 +381,45 @@
               data = JSON.parse(e.data.substr(1));
               stopSent = true;
               break;
+            case '7': // Receive list of playlists
+              data = JSON.parse(e.data.substr(1))
+              var pl = data.pl;
+              var snippet = '';
+              pl.forEach(elem => {
+                  snippet += '<div class="list-group-item" id="' + elem + '" onclick="do_load_pl(this.id)">'
+                      + elem + '</div>';
+                });
+                snippet += '<div class="dropdown-menu dropdown-menu-sm" id="loadpl-context-menu">' + 
+                              '<div class="container">' +       
+                                '<button class="btn btn-danger" type="button" onclick="do_delete_pl()">Delete</button>'+
+                              '</div>' +
+                            '</div>';
+              document.getElementById("loadPlaylistList").innerHTML = snippet;
+              snippet = '';
+              pl.forEach(elem => {
+                  snippet += '<div class="list-group-item" id="' + elem + '" onclick="do_save_pl(this.id)">'
+                      + elem + '</div>';
+                });
+                snippet += '<div class="dropdown-menu dropdown-menu-sm" id="savepl-context-menu">' + 
+                              '<div class="container">' +       
+                                '<button class="btn btn-success" type="button" onclick="update_savePL_dd_menu_rename(rightClickEl.id)">Rename</button>'+
+                                '<button class="btn btn-danger" type="button" onclick="do_delete_pl()">Delete</button>'+
+                              '</div>' +
+                            '</div>';
+                snippet += '<div class="dropdown-menu dropdown-menu-sm" id="renamepl-context-menu">' + 
+                              '<div class="container">' +       
+                                '<div class="input-group mb-3">' +
+                                  '<input type="text" id="new_pl_name" class="form-control" value="">' +
+                                  '<div class="input-group-append">' +
+                                  '<button class="btn btn-outline-secondary" id="rename_btn" type="button" onclick="do_rename_pl(rightClickEl.id,$(\'#new_pl_name\').val());">Rename</button>' +
+                                '</div>' +
+                              '</div>' +
+                            '</div>';
+              document.getElementById("savePLaylistList").innerHTML = snippet;
+              
           }
         };
-      
+
         ws.onclose = function() {
           //output("onclose");
           clearInterval(heartbeat);
@@ -168,10 +432,30 @@
         };
      }
 
+     // Change popup to rename playlist
+     function update_savePL_dd_menu_rename(val) {
+       var top = $('#savepl-context-menu').css('top');
+       var left = $('#savepl-context-menu').css('left');
+       $('#renamepl-context-menu').css({
+          display: "block",
+          top: top,
+          left: left,
+          background: '#295aa2',
+          'min-width': '0px',
+      }).addClass("show");
+      $('#new_pl_name').val(val);
+
+      $('#rename_btn').on("click", function() {
+        $('#renamepl-context-menu').removeClass("show").hide();
+      });
+     }
+
     function do_search(pt) {
       ws.send(JSON.stringify({ cmd: "search", title : document.getElementById("search").value, pagetoken : pt }));
+      $('#searchDialog').modal('hide')  
     }
     function do_play(id) {
+      hide_all_popups();
       stopSent = false;
       playing_id = id;
       // higlight_by_id(playing_id, true);
@@ -180,7 +464,7 @@
 
     function get_id_by_element(elem) {
       var list = document.getElementById("playlist");
-      var pl = list.getElementsByTagName('*');
+      var pl = list.getElementsByTagName('div');
       var i;
       var c = 0;
       for (i = 0; i < pl.length; ++i) {
@@ -196,7 +480,7 @@
 
     function get_element_by_id(p_id) {
       var list = document.getElementById("playlist");
-      var pl = list.getElementsByTagName('*');
+      var pl = list.getElementsByTagName('div');
       var i;
       var c = 0;
       for (i = 0; i < pl.length; ++i) {
@@ -225,71 +509,12 @@
     e.setAttribute('class', cl);
   }
 
-  function do_play_list() {
-    PlayListUpdate();
-    if(playList.length == 0)
-      return;
-    do_play(playList[0].id)
-  }
+  document.getElementById("playlist").addEventListener('dragover', playList_update);
 
-  function do_stop() {
-    ws.send(JSON.stringify({ cmd: "stop"}));
-    stopSent = true;
-  }
-
-  function do_play_next() {
-     var i;
-
-     if(stopSent) {
-       stopSent = false;
-       return;
-     }
-     PlayListUpdate();
-     for(i=0; i<playList.length; i++) {
-       if (playList[i].id == playing_id)
-           break;
-     }  
-     if (i < playList.length-1) {
-       // Play next track
-       do_play(playList[i+1].id);
-     }
-  }
-
-  function do_dblclick(e) {
-    PlayListUpdate();
-    var vid = get_id_by_element(e);
-    do_play(vid);
-  }
-
-  function get_status() {
-    ws.send(JSON.stringify({ cmd: "getStatus"}));
-  }
-
-  function get_playlist() {
-    ws.send(JSON.stringify({ cmd: "getPlaylist"}));
-  }
-
-
-</script>
-
-<script src="/js/Sortable.js"></script>
-<script>
-  s_search_res = new Sortable(search_res, {
-      group: 'shared', // set both lists to same group
-      animation: 150
-  });
-
-  s_playlist = new Sortable(playlist, {
-      group: 'shared',
-      animation: 150
-  });
-
-  document.getElementById("playlist").addEventListener('dragover', PlayListUpdate);
-  
-  function PlayListUpdate() {
+  function playList_update() {
     playList = [];
     var list = document.getElementById("playlist");
-    var pl = list.getElementsByTagName('*');
+    var pl = list.getElementsByTagName('div');
     var i;
     for (i = 0; i < pl.length; ++i) {
         var e = pl[i];
@@ -301,11 +526,116 @@
         playList.push(elem);
     }
     ws.send(JSON.stringify({ cmd: "updatePlaylist", "uuid" : uuid, "pl" : playList}))
+  }
 
+  function do_play_playList() {
+    hide_all_popups();
+    playList_update();
+    if(playList.length == 0)
+      return;
+    do_play(playList[0].id)
+  }
+
+  function do_stop() {
+    hide_all_popups();
+    ws.send(JSON.stringify({ cmd: "stop"}));
+    stopSent = true;
+  }
+
+  function do_fforward(time) {
+    hide_all_popups();
+
+    ws.send(JSON.stringify({ cmd: "fforward", "time": time}));
+  }
+
+  function do_play_next() {
+     var i;
+
+     if(stopSent) {
+       stopSent = false;
+       return;
+     }
+     playList_update();
+     for(i=0; i<playList.length; i++) {
+       if (playList[i].id == playing_id)
+           break;
+     }  
+     if (i < playList.length-1) {
+       // Play next track
+       do_play(playList[i+1].id);
+     }
+  }
+
+  function do_dblclick(e) {
+    playList_update();
+    var vid = get_id_by_element(e);
+    if(vid.length > 0) {
+      do_play(vid);
+    }
+  }
+
+  function do_load_pl(name) {
+    ws.send(JSON.stringify({ cmd: "loadPlaylist", title: name}));
+    $('#openPLaylistDialog').modal('hide')  
+  }
+
+  function do_save_pl(name) {
+    playList_update();
+    ws.send(JSON.stringify({ cmd: "savePlaylist", title: name}));    
+    $('#savePLaylistDialog').modal('hide')
+  }
+
+  function do_delete_pl(name) {
+    if (typeof name == 'undefined') {
+      name = rightClickEl.id;
+    }
+    ws.send(JSON.stringify({ cmd: "delPlaylist", title: name}));    
+    rightClickEl = null;
+  }
+
+  function do_rename_pl(old_name, new_name) {
+    if (typeof old_name == 'undefined' || 
+        typeof new_name == 'undefined') {
+      return;
+    }
+
+    if(old_name.length > 0 && new_name.length > 0) {
+      ws.send(JSON.stringify({ cmd: "renPlaylist", otitle: old_name, ntitle: new_name}));    
+    }
+    rightClickEl = null;
   }
 
 
+  function do_delete_item() {
+    rightClickEl.remove();
+    rightClickEl = null;
+    playList_update();
+  }
 
+  function get_status() {
+    ws.send(JSON.stringify({ cmd: "getStatus"}));
+  }
+
+  function get_playlist() {
+    ws.send(JSON.stringify({ cmd: "getPlaylist"}));
+  }
+
+  function get_list_of_playlist() {
+    hide_all_popups();
+    ws.send(JSON.stringify({ cmd: "listPLaylists"}));
+  }
+
+  var cdnfailover = 0
+
+</script>
+<!--script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous" onerror="cdnfailover|=1"></script-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous" onerror="cdnfailover|=2"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous" onerror="cdnfailover|=4"></script>
+<script>
+(cdnfailover&1)&&document.write('<script src="/js/jquery-3.2.1.slim.min.js"><\/script>'); 
+(cdnfailover&2)&&document.write('<script src="/js/popper.min.js"><\/script>'); 
+(cdnfailover&4)&&document.write('<script src="/js/4.0.0/bootstrap.min.js"><\/script>'); 
+cdnfailover=0;
 </script>
 
 </body>
