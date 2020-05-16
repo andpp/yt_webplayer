@@ -217,9 +217,12 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
         g.playList = []
         i = 0
         for e in content:
-            [vid, txt] = e.split(" ", 1)
-            g.playList.append({'id' : '{0:04d}'.format(i) + vid, 'txt' : txt})
-            i += 1
+            try:
+                [vid, txt] = e.split(" ", 1)
+                g.playList.append({'id' : '{0:04d}'.format(i) + vid, 'txt' : txt})
+                i += 1
+            except:
+                pass
         YTSocketHandler.send_updates(g.RSP_PLAYLIST + tornado.escape.json_encode({"uuid" : "", "pl" : g.playList}))
 
     @tornado.gen.coroutine
@@ -359,7 +362,7 @@ def main():
             iface = config['main'].get('interface','')
 
             if 'audio_out' in config['main']:
-                g.audioOut = config['main'].get("")
+                g.audioOut = config['main'].get("audio_out")
             else:
                 g.audioOut = "audioconvert ! audioresample ! autoaudiosink"
                 logging.info("Using default audio_out: %s" % g.audioOut)

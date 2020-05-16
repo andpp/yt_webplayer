@@ -13,6 +13,38 @@
       .list-group-item {
         padding: 1px;
       }
+      .media-width {
+        position:fixed;
+        top: 85px;
+        width:100%;
+        height: auto;
+        left: 15px;
+        bottom:5px;        
+      }
+      .time-pos {
+        position:fixed;
+        top: 9px;
+        left:340px
+      }
+      .ctrl-buttons {
+        position:fixed;
+        top: 45px;
+      }
+    @media (max-width: 414px) {
+      .media-width {
+        top: 108px;
+      }
+      .container-fluid {
+        padding-left: 1px;
+      }
+      .time-pos {
+         left:320px;
+      }
+      .ctrl-buttons {
+        left: -4px;
+      }
+    }
+      
     </style>
 
   <script type="text/javascript" src="/js/reconnecting-websocket.min.js"></script>
@@ -65,7 +97,7 @@
 
 </head>
 <body id="__apm_media_player" onload="init();">
-  <div class="container-fluid">
+  <div id="amp_container" class="container-fluid">
 
     <div id="apm_media_wrapper" class="clearfix preroll-inactive" style="width:auto;">
       <div id="apm_player_status" class="rounded box" style="margin-top: unset;"></div>
@@ -96,25 +128,25 @@
     </div>
     <!-- END Player Container -->
 
-    <div class="input-group-prepend" style="position:fixed;top: 9px;left:340px">
+    <div class="time-pos input-group-prepend">
       <span class="input-group-text small" id="current_time" style="font-size: x-small;">Stopped</span>
     </div>
     
-    <div class="btn-group" role="group" style="position:fixed;top: 45px;">
+    <div class="ctrl-buttons btn-group" role="group">
       <button id=btn_search class="btn btn-primary" type="button" data-toggle="modal" data-target="#searchDialog" onclick="hide_all_popups()">Search</button>
       <button id=btn_play class="btn btn-success" type="button" onclick="do_play_playList()">Play</button>
-      <button id=btn_ff60 class="btn btn-info" type="button" onclick="do_fforward(60)">1m &gt;&gt;</button>
-      <button id=btn_ff300 class="btn btn-info" type="button" onclick="do_fforward(300)">5m &gt;&gt;</button>
+      <button id=btn_ff60 class="btn btn-info" type="button" onclick="do_fforward(60)">1 &gt;&gt;</button>
+      <button id=btn_ff300 class="btn btn-info" type="button" onclick="do_fforward(300)">5 &gt;&gt;</button>
       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
       <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
       <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
     </div>
-    <div id="shared-lists" class="row" style="position:fixed;top: 85px;width:100%;height: auto;bottom:5px;">
+    <div id="shared-lists" class="media-width row">
       <!--h4 class="col-12">Shared lists</h4-->
       <div id="playlist" class="list-group col on jumbotron1" style="max-height:100%;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
       </div>  
 
-      <div id="search_res" class="list-group col" style="max-height:100%;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
+      <div id="search_res" class="list-group col" style="max-height:100%;margin-bottom: 10px; overflow-y:auto;-webkit-overflow-scrolling: touch;">
       </div>
     </div>
   </div>
@@ -153,8 +185,8 @@
         </div>
       
   <div class="modal-body form-group" style="margin: 4px;">
-    <label for="listTitle">List</label>
-    <input type="text" id="listTitle" name="listTitle" required minlength="2" maxlength="80" size="40">
+    <label for="listTitle">Playlist name</label>
+    <input type="text" id="listTitle" name="listTitle" required minlength="2" maxlength="80" style="width:100%">
   </div>
 
         <div class="modal-footer btn-group" role="group">
@@ -191,15 +223,22 @@
   </div>
 
   <script>
-    s_search_res = new Sortable(search_res, {
-        group: 'shared', // set both lists to same group
-        animation: 150
-    });
+    var search_res_opt = {
+      group: 'shared', // set both lists to same group
+      animation: 150,
+      delay: 100,
+      delayOnTouchOnly : true,
+      touchStartThreshold: 4,
+      fallbackTolerance: 4,
+    };
+    var playlist_opt = {...search_res_opt};
+    playlist_opt.onChange=function(evt) {
+       playList_update()
+    };
 
-    s_playlist = new Sortable(playlist, {
-        group: 'shared',
-        animation: 150
-    });
+    new Sortable(search_res, search_res_opt);
+    new Sortable(playlist, playlist_opt);
+
   </script>
 
 
@@ -221,16 +260,16 @@ $('.jumbotron1').on('contextmenu', function(e) {
   rightClickEl = e.toElement;
   if (rightClickEl.parentElement.id == 'playlist') {
     elem = "#pl-context-menu";
-    top = e.pageY - 100;
-    left = e.pageX;
+    top = rightClickEl.offsetTop; //e.pageY - 100;
+    left = Math.min(e.pageX, 300); //e.pageX;
   } else if (rightClickEl.parentElement.id == 'loadPlaylistList') {
     elem = "#loadpl-context-menu";
     top = rightClickEl.offsetTop
-    left = e.offsetX + rightClickEl.offsetLeft
+    left = Math.min(e.offsetX + rightClickEl.offsetLeft, 300)
   } else if (rightClickEl.parentElement.id == 'savePLaylistList') {
     elem = "#savepl-context-menu";
     top = rightClickEl.offsetTop
-    left = e.offsetX + rightClickEl.offsetLeft
+    left = Math.min(e.offsetX + rightClickEl.offsetLeft, 300)
   } else {
     return true;
   }
@@ -243,9 +282,11 @@ $('.jumbotron1').on('contextmenu', function(e) {
     'min-width': '0px',
   }).addClass("show");
   return false; //blocks default Webbrowser right click menu
-}).on("click", function() {
-  // $(elem).removeClass("show").hide();
-  hide_all_popups();
+}).on("click", function(e) {
+  if (e.toElement.parentElement.id == 'playlist') {
+    $('#pl-context-menu').removeClass("show").hide();
+  }
+  // hide_all_popups();
 });
 
 $("#pl-context-menu button").on("click", function() {
@@ -299,7 +340,9 @@ function hide_all_popups() {
         h = checkTime(Math.floor(s / (60 * 60))),
         m = checkTime(Math.floor((s % (60 * 60)) / 60)),
         s = checkTime(s % 60);
-        return h + ":" + m + ":" + s;      }
+        return h + ":" + m + ":" + s;
+      }
+
       function init() {
         ws = new ReconnectingWebSocket("wss://" + window.location.hostname + window.location.pathname + "ws", null, {reconnectInterval: 5000, maxReconnectInterval: 15000} );
         // Set event handlers.
@@ -406,7 +449,7 @@ function hide_all_popups() {
                                 '<div class="input-group mb-3">' +
                                   '<input type="text" id="new_pl_name" class="form-control" value="">' +
                                   '<div class="input-group-append">' +
-                                  '<button class="btn btn-outline-secondary" id="rename_btn" type="button" onclick="do_rename_pl(rightClickEl.id,$(\'#new_pl_name\').val());">Rename</button>' +
+                                  '<button class="btn btn-outline-secondary" id="rename_btn" type="button" onclick="do_rename_pl(rightClickEl.id,$(\'#new_pl_name\').val());$("#renamepl-context-menu").removeClass("show").hide()">Rename</button>' +
                                 '</div>' +
                               '</div>' +
                             '</div>';
@@ -485,8 +528,8 @@ function hide_all_popups() {
       return null;
     }
 
-  document.getElementById("playlist").addEventListener('dragover', playList_update);
-  document.getElementById("search_res").addEventListener('dragover', playList_update);
+  // document.getElementById("playlist").addEventListener('dragover', playList_update);
+  // document.getElementById("search_res").addEventListener('dragover', playList_update);
 
   function playList_update() {
     playList = [];
@@ -534,11 +577,21 @@ function hide_all_popups() {
   }
 
   function do_load_pl(name) {
+    if ($("#loadpl-context-menu").hasClass("show")) {
+      $("#loadpl-context-menu").removeClass("show").hide();
+      return;
+    }
     ws.send(JSON.stringify({ cmd: "loadPlaylist", title: name}));
     $('#openPLaylistDialog').modal('hide')  
   }
 
   function do_save_pl(name) {
+    if ($("#renamepl-context-menu").hasClass("show") ||
+        $("#savepl-context-menu").hasClass("show")) {
+      $("#renamepl-context-menu").removeClass("show").hide();
+      $("#savepl-context-menu").removeClass("show").hide();
+      return;
+    }
     playList_update();
     ws.send(JSON.stringify({ cmd: "savePlaylist", title: name}));    
     $('#savePLaylistDialog').modal('hide')
