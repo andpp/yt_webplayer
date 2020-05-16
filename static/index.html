@@ -109,7 +109,7 @@
       <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
       <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
     </div>
-    <div id="shared-lists" class="row" style="position:fixed;top: 80px;width:100%;height: auto;bottom:5px;">
+    <div id="shared-lists" class="row" style="position:fixed;top: 85px;width:100%;height: auto;bottom:5px;">
       <!--h4 class="col-12">Shared lists</h4-->
       <div id="playlist" class="list-group col on jumbotron1" style="max-height:100%;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
       </div>  
@@ -217,6 +217,7 @@ $('.jumbotron1').on('contextmenu', function(e) {
   hide_all_popups();
   var top;
   var left;
+  var elem;
   rightClickEl = e.toElement;
   if (rightClickEl.parentElement.id == 'playlist') {
     elem = "#pl-context-menu";
@@ -243,7 +244,8 @@ $('.jumbotron1').on('contextmenu', function(e) {
   }).addClass("show");
   return false; //blocks default Webbrowser right click menu
 }).on("click", function() {
-  $(elem).removeClass("show").hide();
+  // $(elem).removeClass("show").hide();
+  hide_all_popups();
 });
 
 $("#pl-context-menu button").on("click", function() {
@@ -287,7 +289,6 @@ function hide_all_popups() {
       var nextPageToken = "";
       var playing_id = "";
       var playList = [];
-      var stopSent = false;
       var uuid = uuidv4();
 
 
@@ -311,7 +312,7 @@ function hide_all_popups() {
           }, 20000);
 
           get_playlist();
-          get_status();
+          // get_status();
 
         };
 
@@ -335,27 +336,16 @@ function hide_all_popups() {
                       + '<img src="https://i.ytimg.com/vi/' + element.id + '/default.jpg" style="width: 60px;">'
                       + sec_to_time(element.time) + ' - ' + element.title + '</div>';
               });
-              document.getElementById("search_res").innerHTML = snippet;
-              //$("#search_res").html(snippet);
+              $("#search_res").html(snippet);
               break;
             case '1': // current time 
               s_times = e.data.substr(1).split(" ");
               position = parseInt(s_times[0]);
               duration = parseInt(s_times[1])
-              document.getElementById("current_time").innerHTML = sec_to_time(position) + ' of ' + sec_to_time(duration);
+              $('#current_time').html(sec_to_time(position) + ' of ' + sec_to_time(duration));
               break;
             case '2': // Playing was stopped
-              document.getElementById("current_time").innerHTML = 'Stopped';
-              higlight_by_id(playing_id, false);
-              do_play_next();
-              break;
-            case '3': // Status
-              data = JSON.parse(e.data.substr(1))
-              if (data.vid != "") {
-                playing_id = data.vid;
-                higlight_by_id(playing_id, true);
-                stopSent = false;
-              }
+              $('#current_time').html('Stopped');
               break;
             case '4': // PLaylist update
               data = JSON.parse(e.data.substr(1));
@@ -363,23 +353,28 @@ function hide_all_popups() {
               else {
                 var pl = data.pl;
                 var snippet = '';
-                pl.forEach(element => {
-                  var vid = element.id.substr(4)
-                  snippet += '<div class="list-group-item" id="' + vid + '" ondblclick="do_dblclick(this)">'
-                      + '<img src="https://i.ytimg.com/vi/' + vid + '/default.jpg" style="width: 60px;">'
-                      + element.txt + '</div>';
-                });
+                if (pl)
+                  pl.forEach(elem => {
+                    var vid = elem.id.substr(4)
+                    var cls = "list-group-item"
+                    if (elem.active) {
+                      cls += ' list-group-item-info'
+                    }
+
+                    snippet += '<div class="' + cls + '" id="' + vid + '" ondblclick="do_dblclick(this)">'
+                        + '<img src="https://i.ytimg.com/vi/' + vid + '/default.jpg" style="width: 60px;">'
+                        + elem.txt + '</div>';
+                  });
                 snippet += '<div class="dropdown-menu dropdown-menu-sm" id="pl-context-menu">' + 
                               '<div class="container">' +       
                                 '<button class="btn btn-danger" type="button" onclick="do_delete_item()">Delete</button>'+
                               '</div>' +
                             '</div>';
-                document.getElementById("playlist").innerHTML = snippet;
+                $("#playlist").html(snippet);
               }
               break;
             case '6': // Stop command
               data = JSON.parse(e.data.substr(1));
-              stopSent = true;
               break;
             case '7': // Receive list of playlists
               data = JSON.parse(e.data.substr(1))
@@ -394,7 +389,7 @@ function hide_all_popups() {
                                 '<button class="btn btn-danger" type="button" onclick="do_delete_pl()">Delete</button>'+
                               '</div>' +
                             '</div>';
-              document.getElementById("loadPlaylistList").innerHTML = snippet;
+              $("#loadPlaylistList").html(snippet);
               snippet = '';
               pl.forEach(elem => {
                   snippet += '<div class="list-group-item" id="' + elem + '" onclick="do_save_pl(this.id)">'
@@ -415,20 +410,17 @@ function hide_all_popups() {
                                 '</div>' +
                               '</div>' +
                             '</div>';
-              document.getElementById("savePLaylistList").innerHTML = snippet;
-              
+              $("#savePLaylistList").html(snippet);
           }
         };
 
         ws.onclose = function() {
-          //output("onclose");
           clearInterval(heartbeat);
           $("#search_res").html("&nbsp");
         };
 
         ws.onerror = function(e) {
-          //output("onerror");
-          //console.log(e)
+          console.log(e)
         };
      }
 
@@ -451,14 +443,13 @@ function hide_all_popups() {
      }
 
     function do_search(pt) {
-      ws.send(JSON.stringify({ cmd: "search", title : document.getElementById("search").value, pagetoken : pt }));
+      ws.send(JSON.stringify({ cmd: "search", title : $("#search").val(), pagetoken : pt }));
       $('#searchDialog').modal('hide')  
     }
+
     function do_play(id) {
       hide_all_popups();
-      stopSent = false;
       playing_id = id;
-      // higlight_by_id(playing_id, true);
       ws.send(JSON.stringify({ cmd: "play", id : playing_id }));
     }
 
@@ -469,7 +460,7 @@ function hide_all_popups() {
       var c = 0;
       for (i = 0; i < pl.length; ++i) {
         var e = pl[i];
-        if (e.id == '') continue;
+        if (e.id == '' || e.id == 'pl-context-menu') continue;
         if (e == elem) {
           return pad4(c)+e.id;
         }
@@ -494,22 +485,8 @@ function hide_all_popups() {
       return null;
     }
 
-  function higlight_by_id(p_id, higlight) {
-    e = get_element_by_id(p_id);
-    if (e == null) 
-      return;
-    var cl = e.getAttribute('class')
-    if(higlight) {
-      if (!cl.includes('list-group-item-info')) {
-         cl += ' list-group-item-info';
-      }
-    } else {
-      cl = cl.replace(/\s*list-group-item-info/, "");
-    }
-    e.setAttribute('class', cl);
-  }
-
   document.getElementById("playlist").addEventListener('dragover', playList_update);
+  document.getElementById("search_res").addEventListener('dragover', playList_update);
 
   function playList_update() {
     playList = [];
@@ -518,11 +495,12 @@ function hide_all_popups() {
     var i;
     for (i = 0; i < pl.length; ++i) {
         var e = pl[i];
-        if (e.id == '') continue;
+        if (e.id == '' || e.id == 'pl-context-menu') continue;
         var elem = {};
         // First 4 digits are number in playlist to distinct between two items with the same vid
         elem.id = pad4(playList.length) + e.id; 
         elem.txt = e.innerText;
+        elem.active = $(e).hasClass('list-group-item-info');
         playList.push(elem);
     }
     ws.send(JSON.stringify({ cmd: "updatePlaylist", "uuid" : uuid, "pl" : playList}))
@@ -539,34 +517,15 @@ function hide_all_popups() {
   function do_stop() {
     hide_all_popups();
     ws.send(JSON.stringify({ cmd: "stop"}));
-    stopSent = true;
   }
 
   function do_fforward(time) {
     hide_all_popups();
-
     ws.send(JSON.stringify({ cmd: "fforward", "time": time}));
   }
 
-  function do_play_next() {
-     var i;
-
-     if(stopSent) {
-       stopSent = false;
-       return;
-     }
-     playList_update();
-     for(i=0; i<playList.length; i++) {
-       if (playList[i].id == playing_id)
-           break;
-     }  
-     if (i < playList.length-1) {
-       // Play next track
-       do_play(playList[i+1].id);
-     }
-  }
-
   function do_dblclick(e) {
+    hide_all_popups();
     playList_update();
     var vid = get_id_by_element(e);
     if(vid.length > 0) {
@@ -610,10 +569,6 @@ function hide_all_popups() {
     rightClickEl.remove();
     rightClickEl = null;
     playList_update();
-  }
-
-  function get_status() {
-    ws.send(JSON.stringify({ cmd: "getStatus"}));
   }
 
   function get_playlist() {

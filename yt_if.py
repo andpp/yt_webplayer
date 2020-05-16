@@ -73,6 +73,7 @@ class YT:
 
     loop = None
     pipeline = None
+    forceStop = False
 
     # vinfo = {
     #     "position" : 0,
@@ -107,29 +108,32 @@ class YT:
     def fforward(cls, time):
         rc, pos_int = cls.pipeline.query_position(Gst.Format.TIME)
         seek_ns = pos_int + time * 1000000000
-        logging.info('Forward: %d ns -> %d ns' % (pos_int, seek_ns))
+        logging.debug('Forward: %d ns -> %d ns' % (pos_int, seek_ns))
         cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
 
     @classmethod
     def bus_call(cls, bus, message, loop):
-        t = message.type
-        if t == Gst.MessageType.EOS:
-            #sys.stdout.write("End-of-stream\n")
-            cls.played = True
-            cls.on_playing_finished()
+        if cls.forceStop:
             loop.quit()
-            if cls.ioloop:
-                # Send signal that playing was stopped
-                cls.ioloop.add_callback(cls.cb, "2")
+            cls.played = True
+        t = message.type
+        # print(t)
+        if t == Gst.MessageType.EOS:
+            # sys.stdout.write("End-of-stream\n")
+            cls.played = True
+            loop.quit()
         elif t == Gst.MessageType.ERROR:
-            err, debug = message.parse_error()
-            #sys.stderr.write("Error: %s ::: %s\n" % (err, debug))
+            # err, debug = message.parse_error()
+            # sys.stderr.write("Error: %s ::: %s\n" % (err, debug))
             cls.on_playing_finished()
             loop.quit()
         return True
 
     @classmethod
     def one_second_tick(cls, loop, pipeline):
+        if cls.forceStop:
+            loop.quit()
+            cls.played = True
         if not loop.is_running():
             return False
         _, cls.vinfo.position = pipeline.query_position(Gst.Format.TIME)
@@ -146,16 +150,13 @@ class YT:
 
     @classmethod
     def search(cls, yt_title, nextPageToken = None, prevPageToken = None):
-        #a=pafy.call_gdata('search', {'q':'Инструментальное кино Цой', 'maxResults': 50, 'part': 'id,snippet'})
         yt_q =  {'q':yt_title, 'maxResults': g.maxSearchResults, 'part': 'id'}
         if nextPageToken and nextPageToken != "":
             yt_q["pageToken"] = nextPageToken
         if prevPageToken and prevPageToken != "":
             yt_q["pageToken"] = prevPageToken
 
-
         a=pafy.call_gdata('search', yt_q)
-        #print(json.dumps(a, indent=4))
 
         id_list = []
         pl_list = []
@@ -215,18 +216,29 @@ class YT:
         cls.ioloop = ioloop
 
         for cnt in range(3):
+            video = None
             for pcnt in range(3):
                 try:
+                    logging.debug("Getting information about %s" % vid[4:])
                     video = pafy.new('youtube.com/watch?v=' + vid[4:])
+                    break
                 except:
+                    logging.error("Error getting %s data" % vid[4:])
                     pass
 
+            if video is None:
+                continue
+
             s = video.getbestaudio()
-            #print(s.bitrate, s.extension)
 
             # Gst.Pipeline
-            cls.pipeline = Gst.parse_launch('uridecodebin uri="' + s.url + '" ! audioconvert ! audioresample ! ' \
-            'audio/x-raw,rate=48000,channels=2 ! audioconvert ! rtpL16pay ! queue ! udpsink clients=127.0.0.1:10001')
+            logging.debug("Creating pipeline")
+            try:
+                cls.pipeline = Gst.parse_launch('uridecodebin uri="' + s.url + '" ! ' + g.audioOut)
+            except GLib.Error as err:
+                logging.error("Gst.parse_launch error: %s. Parsed str: '%s'" % (err, g.audioOut))
+                g.stopReceived = True
+                break
 
             bus = cls.pipeline.get_bus()
             bus.add_signal_watch()
@@ -239,18 +251,24 @@ class YT:
             GLib.timeout_add_seconds(1, YT.one_second_tick, cls.loop, cls.pipeline)
             bus.connect ("message", YT.bus_call, cls.loop)
             try:
+                logging.debug("Staring play loop")
                 cls.loop.run()
             except KeyboardInterrupt:
-                YT.played = True
+                cls.played = True
 
+            logging.debug("Play loop finished")
             cls.pipeline.set_state(Gst.State.NULL)
             cls.pipeline.get_state(Gst.CLOCK_TIME_NONE)
 
-            cls.on_playing_finished()
-            if YT.played:
+            if cls.played or cls.forceStop:
+                cls.loop = None
                 break
 
             cls.loop = None
+        
+        cls.played = True
+        cls.loop = None
+        cls.on_playing_finished()
                 
 
 
