@@ -140,6 +140,7 @@
       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
       <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
       <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
+      <!--button id=btn_stop class="btn btn-danger" type="button" onclick="get_list_from_YT('PL1732065DA4D56CFC')">Test</button-->
     </div>
     <div id="shared-lists" class="media-width row">
       <!--h4 class="col-12">Shared lists</h4-->
@@ -390,6 +391,9 @@ function hide_all_popups() {
             case '2': // Playing was stopped
               $('#current_time').html('Stopped');
               break;
+            case '3': //Message
+              console.log(e.data.substr(1));
+              break;
             case '4': // PLaylist update
               data = JSON.parse(e.data.substr(1));
               if (data.uuid == uuid) break; // Do not process if the playlist was sent from this window
@@ -617,7 +621,6 @@ function hide_all_popups() {
     rightClickEl = null;
   }
 
-
   function do_delete_item() {
     rightClickEl.remove();
     rightClickEl = null;
@@ -633,6 +636,10 @@ function hide_all_popups() {
     ws.send(JSON.stringify({ cmd: "listPLaylists"}));
   }
 
+  function get_list_from_YT(name) {
+    ws.send(JSON.stringify({ cmd: "getPlFromYT", title: name}));
+  }
+  
   var cdnfailover = 0
 
 </script>

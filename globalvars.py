@@ -2,6 +2,7 @@ class GlobalVariables:
     RSP_TITLES = '0'
     RSP_TIME = '1'
     RSP_END_TRACK = '2'
+    RSP_COMMENT = '3'
     RSP_PLAYLIST = '4'
     RSP_PLAY = '5'
     RSP_STOP = '6'

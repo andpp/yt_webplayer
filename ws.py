@@ -21,11 +21,62 @@ import tornado.web
 import tornado.websocket
 import tornado.locks
 import tornado.gen
-
 from tornado.options import define, options, parse_command_line
+
+import youtube_dl
 
 from yt_if import YT
 from globalvars import GlobalVariables as g
+
+class PlDownloader(threading.Thread):
+    def __init__(self, pl, ioloop, cb):
+        ''' Constructor. '''
+        threading.Thread.__init__(self)
+        self.ydl_opts = {
+            'ignoreerrors': True,
+            # 'quiet': True
+            'logger': self
+        }
+        self.ioloop = ioloop
+        self.cb = cb
+        self.plname = pl
+
+    def debug(self, m):
+        self.notify("D %s" % m)
+
+    def error(self, m):
+        self.notify("E %s" % m)
+
+    def warning(self, m):
+        self.notify("W %s" % m)
+
+    def notify(self, m):
+        self.ioloop.add_callback(self.cb, g.RSP_COMMENT + m)
+
+    def  sec_to_time(self, s):
+        h = '{0:02d}'.format(int(s / (60 * 60)))
+        m = '{0:02d}'.format(int((s % (60 * 60)) / 60))
+        s = '{0:02d}'.format(s % 60)
+        return h + ":" + m + ":" + s
+
+    def run(self):
+        playlist = "https://www.youtube.com/playlist?list=" + self.plname
+
+        with youtube_dl.YoutubeDL(self.ydl_opts) as ydl:
+            playlist_dict = ydl.extract_info(playlist, download=False)
+
+            # print(playlist_dict['id'], playlist_dict['title'])
+            name = sanitize_filepath(os.path.normpath(playlist_dict['title']))
+            fname = os.path.join(g.playlistFolder,os.path.basename(name))
+            while(os.path.exists(fname)):
+                fname = fname + '_'
+
+            with open(fname,"w") as f:
+                for video in playlist_dict['entries']:
+                    if not video:
+                        print('ERROR: Unable to get info. Continuing...')
+                        continue
+                    f.write("%s %s - %s\n" % (video.get('id'), self.sec_to_time(video.get('duration')),  video.get('title')) )
 
 lock = tornado.locks.Lock()
 
@@ -258,6 +309,12 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
             pass
         self.list_playlists()
 
+    @classmethod
+    @tornado.gen.coroutine
+    def get_pl_from_yt(cls, plname):
+        ioloop = tornado.ioloop.IOLoop.instance()
+        a =  PlDownloader(plname, ioloop, cls.send_updates)
+        a.start()
 
     @tornado.gen.coroutine
     def fforward(self, time):
@@ -331,6 +388,10 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
             elif cmd == 'fforward':
                 if 'time' in parsed:
                     self.fforward(parsed['time'])
+
+            elif cmd == 'getPlFromYT':
+                if 'title' in parsed:
+                    self.get_pl_from_yt(parsed['title'])
                 
         except:
             logging.error("error parsing message %s" % message)
