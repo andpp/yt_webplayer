@@ -172,7 +172,7 @@ def yt_play_thread(vid, ioloop, cb):
         else:
             # Active line was removed. Use previous position
             active = last_active
-        if(len(g.playList) <= active):
+        if len(g.playList) <= active:
             break  # Stop if reached enf of playlist
 
     # Send signal that playing was stopped
@@ -233,6 +233,7 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
             logging.debug("Stopping player")
             YT.played = True
             YT.forceStop = True
+            g.stopReceived = True
             if YT.loop:
                 YT.loop.quit()
             cls.play_thread.join()
@@ -248,6 +249,7 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
         YT.forceStop = False
         ioloop = tornado.ioloop.IOLoop.instance()
         cls.play_thread = threading.Thread(target=yt_play_thread, args=(vid, ioloop, cls.send_updates))
+        g.stopReceived = False
         cls.play_thread.start()
         cls.send_updates('3'+ tornado.escape.json_encode({"vid" : vid}))
 
@@ -270,7 +272,7 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
         for e in content:
             try:
                 [vid, txt] = e.split(" ", 1)
-                g.playList.append({'id' : '{0:04d}'.format(i) + vid, 'txt' : txt})
+                g.playList.append({'id' : '{0:04d}'.format(i) + vid, 'txt' : txt, 'active': False})
                 i += 1
             except:
                 pass
@@ -350,7 +352,6 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
 
             elif cmd == 'play':
                 if "id" in parsed:
-                    g.stopReceived = False
                     self.yt_play(parsed["id"])
 
             elif cmd == 'stop':
