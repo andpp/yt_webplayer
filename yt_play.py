@@ -40,7 +40,8 @@ class PlDownloader(threading.Thread):
             'ignoreerrors': True,
             # 'quiet': True
             'logger': self,
-            'no_color': True
+            'no_color': True,
+            'cachedir': '/tmp'
         }
         self.ioloop = ioloop
         self.cb = cb
