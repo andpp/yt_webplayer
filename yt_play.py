@@ -12,6 +12,8 @@ import urllib
 import signal
 import sys
 import time
+import pwd
+import grp
 
 from pathvalidate import sanitize_filepath
 from logging.handlers import RotatingFileHandler, WatchedFileHandler
@@ -88,20 +90,54 @@ lock = tornado.locks.Lock()
 
 def createDaemon():
     try:
+        if os.getuid() == 0:
+            g.pid_file = "/var/run/ytplay/ytplay.pid"
+            pid_dir = os.path.dirname(g.pid_file)
+            if not os.path.exists(pid_dir):
+                os.mkdir(pid_dir)
+        else:
+            g.pid_file = "/tmp/ytplay.pid"
         pid = os.fork()
     except OSError as e:
         raise Exception("%s [%d]" % (e.strerror, e.errno))
 
     if pid == 0:
         os.setsid()
+        # Put to sleep so parent will be able to create pid file
+        time.sleep(0.5)
     else:
-        if os.getuid() == 0:
-            f=open("/var/run/ytplay.pid","w")
-        else:
-            f=open("/tmp/ytplay.pid","w")
+        f=open(g.pid_file,"w")
         f.write(str(pid) + "\n")
         f.close()
         os._exit(0)
+
+def drop_privileges(uid_name='nobody', gid_name='nogroup'):
+    """ Drop privileges of current process to given user and group """
+    
+    if os.getuid() != 0:
+        # We're not root
+        return
+
+    logging.info("Switching privileges to %s:%s" % (uid_name, gid_name))
+    # Get the uid/gid from the name
+    running_uid = pwd.getpwnam(uid_name).pw_uid
+    running_gid = grp.getgrnam(gid_name).gr_gid
+
+    # Change ownership of the pid file in order to be able
+    # to remove it after exiting
+    os.chown(os.path.dirname(g.pid_file), running_uid, running_gid) 
+    os.chown(g.pid_file, running_uid, running_gid)
+
+
+    # Remove group privileges
+    os.setgroups([])
+
+    # Try setting the new uid/gid
+    os.setgid(running_gid)
+    os.setuid(running_uid)
+
+    # Ensure a very conservative umask
+    old_umask = os.umask(0o77) 
 
 class MyBaseHandler(tornado.web.RequestHandler):
     def write_error(self, status_code, **kwargs):
@@ -431,6 +467,8 @@ def main():
             g.domain = config['main'].get('domain', '')
             g.logfile = config['main'].get('logfile', g.logfile)
             is_daemon = config['main'].get('daemon', "false").lower()
+            user = config['main'].get('user')
+            group = config['main'].get('group', 'nogroup')
             port = config['main'].get('port', '9180')
             iface = config['main'].get('interface','')
             
@@ -471,6 +509,8 @@ def main():
         createDaemon()
         setup_logging(g.logfile)
         logging.info('Starting server on %s:%s' % (iface_name, port))
+        if not (user is None):
+            drop_privileges(user, group)
 
 
     if 'main' in config:
@@ -496,6 +536,7 @@ def main():
 def sigint_handler(signal, frame):
     logging.info("Exiting...")
     logging.getLogger().handlers[0].close()
+    os.remove(g.pid_file)
     os._exit(0)
 
 

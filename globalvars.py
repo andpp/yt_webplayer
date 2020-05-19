@@ -13,9 +13,10 @@ class GlobalVariables:
     nowPlayingIdx = -1
     nowPlayingVid = -1
 
-
     maxSearchResults = 5
     playlistFolder = "./playlists"
     domain = ""
     logfile = "ytplay.log"
     audioOut = ""
+
+    pid_file = ""
