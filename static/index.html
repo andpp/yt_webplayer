@@ -44,6 +44,9 @@
       .ctrl-buttons {
         left: -4px;
       }
+      .extra_bnt {
+        visibility: hidden;
+      }
     }
       
     </style>
@@ -141,6 +144,7 @@
       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
       <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
       <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
+      <button id=btn_pull class="extra_bnt btn btn-info" type="button" data-toggle="modal" data-target="#pullPLaylistDialog">Pull</button>
       <!--button id=btn_stop class="btn btn-danger" type="button" onclick="get_list_from_YT('PL1732065DA4D56CFC')">Test</button-->
     </div>
     <div id="shared-lists" class="media-width row">
@@ -212,7 +216,7 @@
 
   <div class="modal-body form-group" style="margin: 4px;">
     <label for="search">Search</label>
-    <input type="text" id="search" name="search" required minlength="2" maxlength="80" size="40">
+    <input type="text" id="search" name="search" required minlength="2" maxlength="80" style="width:100%">
   </div>
         <div class="modal-footer btn-group" role="group">
           <button type="button" class="btn btn-primary"onclick="do_search('')">Search</button>
@@ -223,6 +227,35 @@
       </div>
     </div>
   </div>
+
+  <!-- Load Playlist Dialog -->
+  <div class="modal" id="pullPLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title" id="exampleModalLongTitle">Pull playlist from YouTube</h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <div class="modal-body listgroup" id="pullPLaylistList" style="max-height:300px;margin-bottom: 10px;overflow-y:auto;-webkit-overflow-scrolling: touch;">
+           
+        </div>
+      
+  <div class="modal-body form-group" style="margin: 4px;">
+    <label for="listTitle">Playlist ID</label>
+    <input type="text" id="pulllistTitle" name="pulllistTitle" required minlength="2" maxlength="100" style="width:100%">
+  </div>
+
+        <div class="modal-footer btn-group" role="group">
+          <button type="button" class="btn btn-primary" onclick="get_list_from_YT($('#pulllistTitle').val());$('#pulllistTitle').val('')";>Pull</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>  
+
 
   <script>
     var search_res_opt = {
@@ -393,7 +426,12 @@ function hide_all_popups() {
               $('#current_time').html('Stopped');
               break;
             case '3': //Message
-              console.log(e.data.substr(1));
+              var msg = e.data.substr(1);
+              console.log(msg);
+              var lines = $("#pullPLaylistList").html();
+              lines += '<div class="list-group-item">'+ $('<div>').text(msg).html() + '</div>';
+
+              $("#pullPLaylistList").html(lines);
               break;
             case '4': // PLaylist update
               data = JSON.parse(e.data.substr(1));
@@ -454,7 +492,9 @@ function hide_all_popups() {
                                 '<div class="input-group mb-3">' +
                                   '<input type="text" id="new_pl_name" class="form-control" value="">' +
                                   '<div class="input-group-append">' +
-                                  '<button class="btn btn-outline-secondary" id="rename_btn" type="button" onclick="do_rename_pl(rightClickEl.id,$(\'#new_pl_name\').val());$("#renamepl-context-menu").removeClass("show").hide()">Rename</button>' +
+                                  '<button class="btn btn-outline-secondary" id="rename_btn" type="button"' +
+                                    ' onclick="do_rename_pl(rightClickEl.id,$(\'#new_pl_name\').val());' +
+                                              '$(\'#renamepl-context-menu\').removeClass(\'show\').hide()">Rename</button>' +
                                 '</div>' +
                               '</div>' +
                             '</div>';
@@ -638,6 +678,7 @@ function hide_all_popups() {
   }
 
   function get_list_from_YT(name) {
+    $("#pullPLaylistList").html("");
     ws.send(JSON.stringify({ cmd: "getPlFromYT", title: name}));
   }
   

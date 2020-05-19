@@ -35,20 +35,21 @@ class PlDownloader(threading.Thread):
         self.ydl_opts = {
             'ignoreerrors': True,
             # 'quiet': True
-            'logger': self
+            'logger': self,
+            'no_color': True
         }
         self.ioloop = ioloop
         self.cb = cb
         self.plname = pl
 
     def debug(self, m):
-        self.notify("D %s" % m)
+        self.notify("%s" % m)
 
     def error(self, m):
-        self.notify("E %s" % m)
+        self.notify("%s" % m)
 
     def warning(self, m):
-        self.notify("W %s" % m)
+        self.notify("%s" % m)
 
     def notify(self, m):
         self.ioloop.add_callback(self.cb, g.RSP_COMMENT + m)
@@ -65,6 +66,9 @@ class PlDownloader(threading.Thread):
         with youtube_dl.YoutubeDL(self.ydl_opts) as ydl:
             playlist_dict = ydl.extract_info(playlist, download=False)
 
+            if playlist_dict is None:
+                return
+
             # print(playlist_dict['id'], playlist_dict['title'])
             name = sanitize_filepath(os.path.normpath(playlist_dict['title']))
             fname = os.path.join(g.playlistFolder,os.path.basename(name))
@@ -74,7 +78,7 @@ class PlDownloader(threading.Thread):
             with open(fname,"w") as f:
                 for video in playlist_dict['entries']:
                     if not video:
-                        print('ERROR: Unable to get info. Continuing...')
+                        # logging.debug('Unable to get info about video in playlist')
                         continue
                     f.write("%s %s - %s\n" % (video.get('id'), self.sec_to_time(video.get('duration')),  video.get('title')) )
 
@@ -315,6 +319,15 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     @tornado.gen.coroutine
     def get_pl_from_yt(cls, plname):
         ioloop = tornado.ioloop.IOLoop.instance()
+#      s = s.replace(/.*playlist\?list=/, '')
+#      //https://www.youtube.com/playlist?list=PL7uK4j9GN9LPyEhWqOsGNLhilHYEvAU-t
+        
+        args = plname.split('?')
+        if len(args) > 1:
+            res = urllib.parse.parse_qs(args[1])
+            if 'list' in res:
+                plname = res['list'][0]
+        logging.info("Download playlist from YouTube: %s" % plname)
         a =  PlDownloader(plname, ioloop, cls.send_updates)
         a.start()
 
