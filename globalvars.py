@@ -20,3 +20,4 @@ class GlobalVariables:
     audioOut = ""
 
     pid_file = ""
+    html_path = ""

@@ -207,14 +207,13 @@ def yt_play_thread(vid, ioloop, cb):
     ioloop.add_callback(cb, g.RSP_END_TRACK)
     # Send updated playlist
     send_playlist(ioloop, cb)
-
-
-
     YTSocketHandler.play_thread = None
+
+    
 
 class MainHandler(MyBaseHandler):
     def get(self):
-        self.render(os.path.join(os.path.dirname(__file__), "index.html"))
+        self.render(os.path.join(g.html_path, "index.html"))
 
 class YTSocketHandler(tornado.websocket.WebSocketHandler):
     waiters = set()
@@ -477,10 +476,12 @@ def main():
         logging.error("No playlist folder '%s'" % g.playlistFolder)
         exit(1)
 
+    g.html_path = os.path.join(os.path.dirname(__file__), "html")
+
     settings = dict(
             cookie_secret="7iMKtRBF8VYcjJ0YW3oUCdKs",
-            template_path=os.path.join(os.path.dirname(__file__), "static"),
-            static_path=os.path.join(os.path.dirname(__file__), "static"),
+            template_path=os.path.join(g.html_path, "static"),
+            static_path=os.path.join(g.html_path, "static"),
             xsrf_cookies=True,
             debug=options.debug,
             serve_traceback=False
