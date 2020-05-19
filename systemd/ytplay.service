@@ -1,0 +1,14 @@
+# YouTube play server
+[Unit]
+Description=YouTube Play server
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/ytplay/ytplay.pid
+ExecStart=/usr/local/opt/ytplay/bin/yt_play.py
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
