@@ -127,7 +127,7 @@ def drop_privileges(uid_name='nobody', gid_name='nogroup'):
     # to remove it after exiting
     os.chown(os.path.dirname(g.pid_file), running_uid, running_gid) 
     os.chown(g.pid_file, running_uid, running_gid)
-
+    os.chown(g.logfile, running_uid, running_gid)
 
     # Remove group privileges
     os.setgroups([])
@@ -209,7 +209,7 @@ def yt_play_thread(vid, ioloop, cb):
     send_playlist(ioloop, cb)
     YTSocketHandler.play_thread = None
 
-    
+
 
 class MainHandler(MyBaseHandler):
     def get(self):
@@ -505,6 +505,11 @@ def main():
     except OSError as e:
         logging.error("Can't bind to port %s. Exitting..." % port)
         sys.exit(1)
+
+    try:
+        os.chmod(g.logfile, 0o644)
+    except:
+        pass
 
     if is_daemon == 'true':
         createDaemon()
