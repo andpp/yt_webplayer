@@ -246,6 +246,8 @@ class YT:
             cls.on_playing_started(vid, video.title)
             cls.pipeline.set_state(Gst.State.PLAYING)
 
+            logging.info("Playing %s - %s" %(vid[4:], video.title))
+
             # cls.loop = GLib.MainLoop()
             cls.loop = myMainLoop()
             GLib.timeout_add_seconds(1, YT.one_second_tick, cls.loop, cls.pipeline)

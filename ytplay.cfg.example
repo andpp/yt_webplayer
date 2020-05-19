@@ -7,5 +7,6 @@ playlist_folder = ./playlists
 domain = your.domain
 daemon = true
 debug = false
+logfile = /var/log/ytpaly.log
 
 audio_out = audioconvert ! audioresample ! audio/x-raw,rate=48000,channels=2 ! audioconvert ! rtpL16pay ! queue ! udpsink clients=127.0.0.1:10001

@@ -11,9 +11,10 @@ import configparser
 import urllib
 import signal
 import sys
+import time
 
 from pathvalidate import sanitize_filepath
-
+from logging.handlers import RotatingFileHandler, WatchedFileHandler
 
 import tornado.escape
 import tornado.ioloop
@@ -21,6 +22,7 @@ import tornado.web
 import tornado.websocket
 import tornado.locks
 import tornado.gen
+# import tornado.log
 from tornado.options import define, options, parse_command_line
 
 import youtube_dl
@@ -92,20 +94,6 @@ def createDaemon():
 
     if pid == 0:
         os.setsid()
-
-        try:
-            sys.stdin.close()
-            sys.stdout.close()
-            sys.stderr.close()
-            try:
-                logFile = open(g.logfile,"a+",0)
-            except:
-                logging.error("Error opening logfile %s" % g.logfile)
-            sys.stdout = logFile
-            sys.stderr = logFile
-        except Exception as e:
-            logging.error(e)
-            pass
     else:
         if os.getuid() == 0:
             f=open("/var/run/ytplay.pid","w")
@@ -225,9 +213,9 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     
     @tornado.gen.coroutine
     def yt_search(self, title, nextpage):
-        logging.debug("Starting search for %s" % title)
+        logging.info("Starting search for %s" % title)
         res = YT.search(title, nextpage)
-        logging.info(res)
+        logging.debug(res)
         YTSocketHandler.send_updates(g.RSP_TITLES + tornado.escape.json_encode(res))
 
     @classmethod
@@ -261,6 +249,7 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     def save_playlist(self, name):
         name = sanitize_filepath(os.path.normpath(name))
         fname = os.path.join(g.playlistFolder,os.path.basename(name))
+        logging.info("Saving playlist '%s'" % fname)
         with open(fname,'w') as f:
             for e in g.playList:
                 f.write("%s %s\n" % (e['id'][4:] , e['txt']))
@@ -269,6 +258,7 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     def load_playlist(self, name):
         name = sanitize_filepath(os.path.normpath(name))
         fname = os.path.join(g.playlistFolder,os.path.basename(name))
+        logging.info("Loading playlist '%s'" % fname)
         with open(fname,'r') as f:
             content = f.read().splitlines()
         g.playList = []
@@ -291,6 +281,8 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     @tornado.gen.coroutine
     def delete_playlist(self, name):
         name = sanitize_filepath(os.path.normpath(name))
+        logging.info("Deleting playlist '%s'" % name)
+
         try:
             name = os.path.basename(name)
             fname = os.path.join(g.playlistFolder, name)
@@ -304,6 +296,8 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     def rename_playlist(self, oname, nname):
         oname = sanitize_filepath(os.path.normpath(oname))
         nname = sanitize_filepath(os.path.normpath(nname))
+        logging.info("Renaming playlist '%s' to '%s'" % (oname, nname))
+
         try:
             oname = os.path.basename(oname)
             nname = os.path.basename(nname)
@@ -408,44 +402,42 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
             logging.error("error parsing message %s" % message)
             pass
 
+def setup_logging(logfile):
+    logging.info("Logging to %s" % g.logfile)
+    root_logger = logging.getLogger()
+
+    #handler = RotatingFileHandler(logfile, maxBytes=1024*1024*1024, backupCount=3)
+    handler = WatchedFileHandler(logfile,"a+")
+
+    # Update default handler
+    root_logger.handlers[0] = handler
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s:  %(message)s"))
+
 def main():
     # define("port", default=9180, help="run on the given port", type=int)
     define("debug", default=False, help="run in debug mode")
     define("config", default='/etc/ytplay/ytplay.cfg', help="configuration file")
-
     parse_command_line()
 
     config = configparser.ConfigParser()
     if len(config.read(options.config)) > 0:
 
         if 'main' in config:
-            if 'api_key' in config['main']:
-                logging.info("Found API key. Iniitalizing...")
-                YT.set_api_key(config['main']['api_key'])
-
             if 'debug' in config['main']:
                 options.debug = config['main']['debug'].lower() == 'true'
 
             g.maxSearchResults = config['main'].get('max_search_results', g.maxSearchResults)
             g.playlistFolder = config['main'].get('playlist_folder', g.playlistFolder)
             g.domain = config['main'].get('domain', '')
+            g.logfile = config['main'].get('logfile', g.logfile)
             is_daemon = config['main'].get('daemon', "false").lower()
             port = config['main'].get('port', '9180')
             iface = config['main'].get('interface','')
-
-            if 'audio_out' in config['main']:
-                g.audioOut = config['main'].get("audio_out")
-            else:
-                g.audioOut = "audioconvert ! audioresample ! autoaudiosink"
-                logging.info("Using default audio_out: %s" % g.audioOut)
-                
+            
 
     if not os.path.isdir(g.playlistFolder):
         logging.error("No playlist folder '%s'" % g.playlistFolder)
         exit(1)
-
-    if is_daemon == 'true':
-        createDaemon()
 
     settings = dict(
             cookie_secret="7iMKtRBF8VYcjJ0YW3oUCdKs",
@@ -462,15 +454,38 @@ def main():
             (r"/js/(.*)", tornado.web.StaticFileHandler, {"path": settings["static_path"]}),
             (r"/APM/(.*)", tornado.web.StaticFileHandler, {"path": os.path.join(settings["static_path"],"APM")})
     ]
-  
+
     if iface == '':
         iface_name = '*'
     else:
         iface_name = iface
     logging.info('Starting server on %s:%s' % (iface_name, port))
     app = tornado.web.Application(handlers, **settings)
-    app.listen(port = port, address = iface)
+    try:
+        app.listen(port = port, address = iface)
+    except OSError as e:
+        logging.error("Can't bind to port %s. Exitting..." % port)
+        sys.exit(1)
+
+    if is_daemon == 'true':
+        createDaemon()
+        setup_logging(g.logfile)
+        logging.info('Starting server on %s:%s' % (iface_name, port))
+
+
+    if 'main' in config:
+        if 'api_key' in config['main']:
+            logging.info("Found API key. Iniitalizing...")
+            YT.set_api_key(config['main']['api_key'])
+        if 'audio_out' in config['main']:
+            g.audioOut = config['main'].get("audio_out")
+        else:
+            g.audioOut = "audioconvert ! audioresample ! autoaudiosink"
+            logging.info("Using default audio_out: %s" % g.audioOut)
+
+
     signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGTERM, sigint_handler)
     tornado.ioloop.IOLoop.instance().start()
 
 
@@ -479,14 +494,9 @@ def main():
 ##########################################################################################################
 
 def sigint_handler(signal, frame):
-        try:
-            print('You pressed Ctrl+C!')
-        except:
-            pass
-        finally: 
-            os._exit(0)
-            #os.kill(os.getpid(), signal.SIGKILL)
-
+    logging.info("Exiting...")
+    logging.getLogger().handlers[0].close()
+    os._exit(0)
 
 
 if __name__ == "__main__":
