@@ -319,9 +319,6 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     @tornado.gen.coroutine
     def get_pl_from_yt(cls, plname):
         ioloop = tornado.ioloop.IOLoop.instance()
-#      s = s.replace(/.*playlist\?list=/, '')
-#      //https://www.youtube.com/playlist?list=PL7uK4j9GN9LPyEhWqOsGNLhilHYEvAU-t
-        
         args = plname.split('?')
         if len(args) > 1:
             res = urllib.parse.parse_qs(args[1])
