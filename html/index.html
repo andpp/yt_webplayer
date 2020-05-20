@@ -22,15 +22,27 @@
         left: 15px;
         bottom:5px;        
       }
-      .time-pos {
-        position:fixed;
-        top: 9px;
-        left:340px
+      .pull-btn-pos {
+        position: fixed;
+        top: 7px;
+        left: 340px;
+        height: 34px;
       }
       .ctrl-buttons {
         position:fixed;
         top: 45px;
       }
+      .apm_player_playtime {
+        text-align: right;
+        width: 132px;
+        display: block;
+        font-size: 10px;
+        font-family: Arial;
+        float: left;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.65);
+        text-align: center;
+        margin: -1px -15px 0 0;
+    }
     @media (max-width: 414px) {
       .media-width {
         top: 108px;
@@ -38,14 +50,11 @@
       .container-fluid {
         padding-left: 1px;
       }
-      .time-pos {
+      .pull-btn-pos {
          left:320px;
       }
       .ctrl-buttons {
         left: -4px;
-      }
-      .extra_bnt {
-        visibility: hidden;
       }
     }
       
@@ -110,12 +119,12 @@
               <div id="apm_player_play" class="player-toggle hide-text">Play</div>
               <div id="apm_player_pause" class="player-toggle hide-text">Pause</div>
               <div id="apm_player_bar_wrapper">
-                  <div id="apm_player_bar_container" class="rounded">
+                  <div id="apm_player_bar_container" class="rounded" style="width: 105px;">
                       <div id="apm_player_bar">
                           <div id="apm_player_loading" class="rounded4"></div>
                       </div>
                   </div>
-                  <div id="apm_player_playtime">0:00</div>
+                  <div class="apm_player_playtime" id="my_apm_player_playtime">Stopped</div>
               </div>
               <div id="apm_player_volume_wrapper">
                   <div id="apm_player_volume_status">
@@ -132,8 +141,8 @@
     </div>
     <!-- END Player Container -->
 
-    <div class="time-pos input-group-prepend">
-      <span class="input-group-text small" id="current_time" style="font-size: x-small;">Stopped</span>
+    <div class="pull-btn-pos input-group-prepend">
+      <button id=btn_pull class="btn btn-info" type="button" data-toggle="modal" data-target="#pullPLaylistDialog">Pull list</button>
     </div>
     
     <div class="ctrl-buttons btn-group" role="group">
@@ -144,8 +153,6 @@
       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
       <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
       <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
-      <button id=btn_pull class="extra_bnt btn btn-info" type="button" data-toggle="modal" data-target="#pullPLaylistDialog">Pull</button>
-      <!--button id=btn_stop class="btn btn-danger" type="button" onclick="get_list_from_YT('PL1732065DA4D56CFC')">Test</button-->
     </div>
     <div id="shared-lists" class="media-width row">
       <!--h4 class="col-12">Shared lists</h4-->
@@ -159,11 +166,11 @@
 
   <!-- Modal -->
   <!-- Open Playlist Dialog -->
-  <div class="modal" id="openPLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal" id="openPLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="ModalCenterTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h6 class="modal-title" id="exampleModalLongTitle">Load playlist</h6>
+          <h6 class="modal-title" id="ModalLongTitle">Load playlist</h6>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -176,11 +183,11 @@
   </div>
 
   <!-- Save Dialog -->
-  <div class="modal" id="savePLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal" id="savePLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="ModalCenterTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h6 class="modal-title" id="exampleModalLongTitle">Save playlist</h6>
+          <h6 class="modal-title" id="ModalLongTitle">Save playlist</h6>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -204,11 +211,11 @@
   </div>  
 
   <!-- Search Dialog -->
-  <div class="modal" id="searchDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal" id="searchDialog" tabindex="-1" role="dialog" aria-labelledby="ModalCenterTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h6 class="modal-title" id="exampleModalLongTitle">Load playlist</h6>
+          <h6 class="modal-title" id="ModalLongTitle">Load playlist</h6>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -229,11 +236,11 @@
   </div>
 
   <!-- Load Playlist Dialog -->
-  <div class="modal" id="pullPLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal" id="pullPLaylistDialog" tabindex="-1" role="dialog" aria-labelledby="ModalCenterTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h6 class="modal-title" id="exampleModalLongTitle">Pull playlist from YouTube</h6>
+          <h6 class="modal-title" id="ModalLongTitle">Pull playlist from YouTube</h6>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -420,10 +427,12 @@ function hide_all_popups() {
               s_times = e.data.substr(1).split(" ");
               position = parseInt(s_times[0]);
               duration = parseInt(s_times[1])
-              $('#current_time').html(sec_to_time(position) + ' of ' + sec_to_time(duration));
+              // $('#current_time').html(sec_to_time(position) + ' of ' + sec_to_time(duration));
+              $('#my_apm_player_playtime').html(sec_to_time(position) + ' of ' + sec_to_time(duration));
               break;
             case '2': // Playing was stopped
-              $('#current_time').html('Stopped');
+              // $('#current_time').html('Stopped');
+              $('#my_apm_player_playtime').html('Stopped');
               break;
             case '3': //Message
               var msg = e.data.substr(1);
@@ -478,7 +487,7 @@ function hide_all_popups() {
               $("#loadPlaylistList").html(snippet);
               snippet = '';
               pl.forEach(elem => {
-                  snippet += '<div class="list-group-item" id="' + elem + '" onclick="do_save_pl(this.id)">'
+                  snippet += '<div class="list-group-item" id="' + elem + '" ondblclick="do_save_pl(this.id)">'
                       + elem + '</div>';
                 });
                 snippet += '<div class="dropdown-menu dropdown-menu-sm" id="savepl-context-menu">' + 
