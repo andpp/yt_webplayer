@@ -17,12 +17,6 @@ Gst.init(sys.argv)
 
 from globalvars import GlobalVariables as g
 
-# def forward_callback(self, w):
-#         rc, pos_int = self.player.query_position(Gst.Format.TIME)
-#         seek_ns = pos_int + 10 * 1000000000
-#         print 'Forward: %d ns -> %d ns' % (pos_int, seek_ns)
-#         self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
-
 ISO8601_TIMEDUR_EX = re.compile(r'PT((\d{1,3})H)?((\d{1,3})M)?((\d{1,2})S)?')
 
 class VInfo:
@@ -31,7 +25,8 @@ class VInfo:
     vid = ""
     title = ""
 
-class myMainLoop(GLib.MainLoop):
+# Redefine MainLoop to get rid of system signal reassigment
+class PlayerMainLoop(GLib.MainLoop):
     # Backwards compatible constructor API
     def __new__(cls, context=None):
         return GLib.MainLoop.new(context, False)
@@ -39,32 +34,9 @@ class myMainLoop(GLib.MainLoop):
     # Retain classic pygobject behaviour of quitting main loops on SIGINT
     def __init__(self, context=None):
         pass
-        # def _handler(loop):
-        #     loop.quit()
-        #     loop._quit_by_sigint = True
-        #     # We handle signal deletion in __del__, return True so GLib
-        #     # doesn't do the deletion for us.
-        #     return True
-
-        # if sys.platform != 'win32':
-        #     # compatibility shim, keep around until we depend on glib 2.36
-        #     if hasattr(GLib, 'unix_signal_add'):
-        #         fn = GLib.unix_signal_add
-        #     else:
-        #         fn = GLib.unix_signal_add_full
-        #     self._signal_source = fn(GLib.PRIORITY_DEFAULT, signal.SIGINT, _handler, self)
 
     def __del__(self):
         pass
-        # if hasattr(self, '_signal_source'):
-        #     GLib.source_remove(self._signal_source)
-
-    # def run(self):
-    #     super(MainLoop, self).run()
-    #     if hasattr(self, '_quit_by_sigint'):
-    #         # caught by _main_loop_sigint_handler()
-    #         raise KeyboardInterrupt
-
 
 class YT:
     played = False
@@ -75,13 +47,6 @@ class YT:
     pipeline = None
     forceStop = False
 
-    # vinfo = {
-    #     "position" : 0,
-    #     "duration" : 0,
-    #     "vid" : "",
-    #     "title" : "",
-    # }
-
     vinfo = VInfo()
 
     @staticmethod
@@ -90,7 +55,6 @@ class YT:
 
     @classmethod
     def on_playing_finished(cls):
-        # cls.played = True
         cls.vinfo.vid = ""
         cls.vinfo.title = ""
         cls.vinfo.position = 0
@@ -117,7 +81,6 @@ class YT:
             loop.quit()
             cls.played = True
         t = message.type
-        # print(t)
         if t == Gst.MessageType.EOS:
             # sys.stdout.write("End-of-stream\n")
             cls.played = True
@@ -248,8 +211,7 @@ class YT:
 
             logging.info("Playing %s - %s" %(vid[4:], video.title))
 
-            # cls.loop = GLib.MainLoop()
-            cls.loop = myMainLoop()
+            cls.loop = PlayerMainLoop()
             GLib.timeout_add_seconds(1, YT.one_second_tick, cls.loop, cls.pipeline)
             bus.connect ("message", YT.bus_call, cls.loop)
             try:
