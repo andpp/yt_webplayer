@@ -214,7 +214,8 @@ def yt_play_thread(vid, ioloop, cb):
 
 class MainHandler(MyBaseHandler):
     def get(self):
-        self.render(os.path.join(g.html_path, "index.html"))
+        # self.render(os.path.join(g.html_path, "index.html"))
+        self.render("index.html")
 
 class YTSocketHandler(tornado.websocket.WebSocketHandler):
     waiters = set()
@@ -362,6 +363,10 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     def fforward(self, time):
         YT.fforward(time)
 
+    @tornado.gen.coroutine
+    def seek(self, percent):
+        YT.seek(percent)
+
     def check_origin(self, origin: str) -> bool:
         parsed_origin = urllib.parse.urlparse(origin)
         origin = parsed_origin.netloc
@@ -430,6 +435,11 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
                 if 'time' in parsed:
                     self.fforward(parsed['time'])
 
+            elif cmd == 'seek':
+                if 'percent' in parsed:
+                    self.seek(parsed['percent'])
+
+
             elif cmd == 'getPlFromYT':
                 if 'title' in parsed:
                     self.get_pl_from_yt(parsed['title'])
@@ -478,6 +488,7 @@ def main():
         exit(1)
 
     g.html_path = os.path.join(os.path.dirname(__file__), "html")
+    # g.html_path = os.path.dirname(__file__)
 
     settings = dict(
             cookie_secret="7iMKtRBF8VYcjJ0YW3oUCdKs",

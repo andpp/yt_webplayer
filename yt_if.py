@@ -76,6 +76,14 @@ class YT:
         cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
 
     @classmethod
+    def seek(cls, percent):
+        rc, pos_int = cls.pipeline.query_position(Gst.Format.TIME)
+        rc, duration = cls.pipeline.query_duration(Gst.Format.TIME)
+        seek_ns = duration * percent
+        logging.debug('Seek: %d ns -> %d ns' % (pos_int, seek_ns))
+        cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
+
+    @classmethod
     def bus_call(cls, bus, message, loop):
         if cls.forceStop:
             loop.quit()

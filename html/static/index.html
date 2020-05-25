@@ -77,10 +77,19 @@
   <script type="text/javascript" src="/APM/script/lib/soundmanager2-nodebug-jsmin.js"></script>
   <!--script type="text/javascript" src="/APM/script/apmplayer.js"></script>
   <script type="text/javascript" src="/APM/script/apmplayer_ui.jquery.js"></script-->
-  <script type="text/javascript" src="/APM/script/apmplayer-all.min.js"></script>
+  <!-- <script type="text/javascript" src="/APM/script/apmplayer-all.min.js"></script> -->
+  <script type="text/javascript" src="/APM/script/apmplayer_live.js"></script> 
+  <script type="text/javascript" src="/APM/script/apmplayer_ui_live.jquery.js"></script>
   <!-- end NOTE -->
 
   <script>
+    var g_duration = 0;
+    var g_position = 0;
+    var g_percent_played=1;
+    var g_seek = function(percent_dec) {
+      do_seek(percent_dec);
+    };
+
     // AMP player support function
       $(document).ready(function(){
         $('#apm_media_wrapper').apmplayer_ui({
@@ -101,6 +110,7 @@
             ],
         });
     });
+
   </script>
 
    <meta name="viewport" content="width=device-width, initial-scale=0.941176471, maximum-scale=1, user-scalable=no" />
@@ -419,10 +429,17 @@ function hide_all_popups() {
               s_times = e.data.substr(1).split(" ");
               position = parseInt(s_times[0]);
               duration = parseInt(s_times[1])
-              $('#my_apm_player_playtime').html(sec_to_time(position) + ' of ' + sec_to_time(duration));
+              $('#my_apm_player_playtime').html(sec_to_time(position) + ' / ' + sec_to_time(duration));
+              g_duration = duration*1000;
+              g_position = position*1000;
+              g_percent_played = position/duration;
               break;
             case '2': // Playing was stopped
               $('#my_apm_player_playtime').html('Stopped');
+              g_duration = 1;
+              g_position = 1;
+              g_percent_played = 1;
+
               break;
             case '3': //Message
               var msg = e.data.substr(1);
@@ -607,6 +624,12 @@ function hide_all_popups() {
     hide_all_popups();
     ws.send(JSON.stringify({ cmd: "fforward", "time": time}));
   }
+
+  function do_seek(time) {
+    hide_all_popups();
+    ws.send(JSON.stringify({ cmd: "seek", "percent": time}));
+  }
+
 
   function do_dblclick(e) {
     hide_all_popups();
