@@ -34,7 +34,7 @@
       }
       .apm_player_playtime {
         text-align: right;
-        width: 132px;
+        width: 60px;
         display: block;
         font-size: 10px;
         font-family: Arial;
@@ -72,14 +72,13 @@
   <!--script type="text/javascript" src="/APM/script/lib/jquery.1.11.0.min.js"></script-->
   <script type="text/javascript" src="/APM/script/lib/jquery.2.1.0.min.js"></script>
   <script type="text/javascript" src="/APM/script/lib/jquery-ui-slider-1.10.4.custom.min.js"></script>
-  <!--script type="text/javascript" src="/APM/script/lib/modernizr-2.5.3-custom.min.js"></script-->
-  <!--script type="text/javascript" src="/APM/script/lib/soundmanager2-jsmin.js"></script-->
   <script type="text/javascript" src="/APM/script/lib/soundmanager2-nodebug-jsmin.js"></script>
-  <!--script type="text/javascript" src="/APM/script/apmplayer.js"></script>
-  <script type="text/javascript" src="/APM/script/apmplayer_ui.jquery.js"></script-->
+  <!-- script type="text/javascript" src="/APM/script/apmplayer.js"></script> -->
+  <!-- <script type="text/javascript" src="/APM/script/apmplayer_ui.jquery.js"></script> -->
   <!-- <script type="text/javascript" src="/APM/script/apmplayer-all.min.js"></script> -->
-  <script type="text/javascript" src="/APM/script/apmplayer_live.js"></script> 
-  <script type="text/javascript" src="/APM/script/apmplayer_ui_live.jquery.js"></script>
+  <!-- <script type="text/javascript" src="/APM/script/apmplayer_live.js"></script> -->
+  <!-- <script type="text/javascript" src="/APM/script/apmplayer_ui_live.jquery.js"></script> -->
+  <script type="text/javascript" src="/APM/script/apmplayer_live-all.min.js"></script>
   <!-- end NOTE -->
 
   <script>
@@ -121,12 +120,12 @@
 
     <div id="apm_media_wrapper" class="clearfix preroll-inactive" style="width:auto;">
       <div id="apm_player_status" class="rounded box" style="margin-top: unset;"></div>
-      <div id="apm_player_controls" class="volume playtime" style="left:10px;">
+      <div id="apm_player_controls" class="volume playtime" style="left:10px;width:400px;">
           <div id="apm_player_toggle">
               <div id="apm_player_play" class="player-toggle hide-text">Play</div>
               <div id="apm_player_pause" class="player-toggle hide-text">Pause</div>
-              <div id="apm_player_bar_wrapper">
-                  <div id="apm_player_bar_container" class="rounded" style="width: 105px;">
+              <div id="apm_player_bar_wrapper" style="width:305px;">
+                  <div id="apm_player_bar_container" class="rounded" style="width: 250px;">
                       <div id="apm_player_bar">
                           <div id="apm_player_loading" class="rounded4"></div>
                       </div>
@@ -148,16 +147,18 @@
     </div>
     <!-- END Player Container -->
 
-    <div class="pull-btn-pos input-group-prepend">
+    <!-- <div class="pull-btn-pos input-group-prepend">
       <button id=btn_pull class="btn btn-info" type="button" data-toggle="modal" data-target="#pullPLaylistDialog">Pull list</button>
-    </div>
+    </div> -->
     
     <div class="ctrl-buttons btn-group" role="group">
       <button id=btn_search class="btn btn-primary" type="button" data-toggle="modal" data-target="#searchDialog" onclick="hide_all_popups()">Search</button>
       <button id=btn_play class="btn btn-success" type="button" onclick="do_play_playList()">Play</button>
-      <button id=btn_ff60 class="btn btn-info" type="button" onclick="do_fforward(60)">1 &gt;&gt;</button>
-      <button id=btn_ff300 class="btn btn-info" type="button" onclick="do_fforward(300)">5 &gt;&gt;</button>
+      <button id=btn_ff60 class="btn btn-info" type="button" onclick="do_fforward(6000)">&gt;&gt;</button>
+      <!-- <button id=btn_ff60 class="btn btn-info" type="button" onclick="do_fforward(60)">1 &gt;&gt;</button>
+      <button id=btn_ff300 class="btn btn-info" type="button" onclick="do_fforward(300)">5 &gt;&gt;</button> -->
       <button id=btn_stop class="btn btn-danger" type="button" onclick="do_stop()">Stop</button>
+      <button id=btn_pull class="btn btn-info" type="button" data-toggle="modal" data-target="#pullPLaylistDialog">Pull</button>
       <button id=btn_load class="btn btn-info" type="button" data-toggle="modal" data-target="#openPLaylistDialog" onclick="get_list_of_playlist()">Load</button>
       <button id=btn_save class="btn btn-info" type="button" data-toggle="modal" data-target="#savePLaylistDialog" onclick="get_list_of_playlist()">Save</button>
     </div>
@@ -429,17 +430,18 @@ function hide_all_popups() {
               s_times = e.data.substr(1).split(" ");
               position = parseInt(s_times[0]);
               duration = parseInt(s_times[1])
-              $('#my_apm_player_playtime').html(sec_to_time(position) + ' / ' + sec_to_time(duration));
+              $('#my_apm_player_playtime').html(sec_to_time(position) + ' ' + sec_to_time(duration));
               g_duration = duration*1000;
               g_position = position*1000;
               g_percent_played = position/duration;
+              $("#my_apm_player_playtime").attr('style',  'margin: -8px -15px 0 0;');
               break;
             case '2': // Playing was stopped
               $('#my_apm_player_playtime').html('Stopped');
               g_duration = 1;
               g_position = 1;
               g_percent_played = 1;
-
+              $("#my_apm_player_playtime").attr('style',  'margin: -1px -15px 0 0;');
               break;
             case '3': //Message
               var msg = e.data.substr(1);
@@ -684,6 +686,7 @@ function hide_all_popups() {
   function do_delete_item() {
     rightClickEl.remove();
     rightClickEl = null;
+    hide_all_popups();
     playList_update();
   }
 
