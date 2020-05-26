@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import logging
+import threading
 
 import gi 
 gi.require_version('Gst', '1.0')
@@ -47,6 +48,8 @@ class YT:
     pipeline = None
     forceStop = False
 
+    lock = None
+
     vinfo = VInfo()
 
     @staticmethod
@@ -73,14 +76,18 @@ class YT:
         rc, pos_int = cls.pipeline.query_position(Gst.Format.TIME)
         seek_ns = pos_int + time * 1000000000
         logging.debug('Forward: %d ns -> %d ns' % (pos_int, seek_ns))
+        cls.lock.acquire()
         cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
+        cls.lock.release()
 
     @classmethod
     def seek(cls, percent):
         rc, duration = cls.pipeline.query_duration(Gst.Format.TIME)
         seek_ns = duration * percent
         logging.debug('Seek -> %d ns' % seek_ns)
+        cls.lock.acquire()
         cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
+        cls.lock.release()
 
     @classmethod
     def bus_call(cls, bus, message, loop):
@@ -101,13 +108,16 @@ class YT:
 
     @classmethod
     def one_second_tick(cls, loop, pipeline):
+        cls.lock.acquire()
         if cls.forceStop:
             loop.quit()
             cls.played = True
         if not loop.is_running():
+            cls.lock.release()
             return False
         _, cls.vinfo.position = pipeline.query_position(Gst.Format.TIME)
         if cls.vinfo.position == -1:
+            cls.lock.release()
             return False
         _, cls.vinfo.duration = pipeline.query_duration(Gst.Format.TIME)
         # print("\rPosition: %s of %s" % (Gst.TIME_ARGS(position).split('.',1)[0], 
@@ -115,7 +125,7 @@ class YT:
         if cls.ioloop:
             cls.ioloop.add_callback(cls.cb, g.RSP_TIME + "%d %d" % (int(cls.vinfo.position/1000000000),
                                                                     int(cls.vinfo.duration/1000000000)))
-
+        cls.lock.release()
         return True
 
     @classmethod
@@ -184,6 +194,9 @@ class YT:
         cls.played = False
         cls.cb = cb
         cls.ioloop = ioloop
+
+        if cls.lock is None:
+            cls.lock = threading.Lock()
 
         for cnt in range(3):
             video = None
