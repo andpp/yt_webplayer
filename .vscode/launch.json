@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "yt_play.py",
             "console": "integratedTerminal",
-            "args": ["--config=test_data/ytplay.cfg"]
+            "args": ["--config=test_data/ytplay.cfg", "--logging=debug"]
         }
     ]
 }

@@ -367,7 +367,7 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
     def seek(self, percent):
         YT.seek(percent)
 
-    def check_origin(self, origin: str) -> bool:
+    def check_origin(self, origin):
         parsed_origin = urllib.parse.urlparse(origin)
         origin = parsed_origin.netloc
         origin = origin.lower()

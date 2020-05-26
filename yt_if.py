@@ -77,10 +77,9 @@ class YT:
 
     @classmethod
     def seek(cls, percent):
-        rc, pos_int = cls.pipeline.query_position(Gst.Format.TIME)
         rc, duration = cls.pipeline.query_duration(Gst.Format.TIME)
         seek_ns = duration * percent
-        logging.debug('Seek: %d ns -> %d ns' % (pos_int, seek_ns))
+        logging.debug('Seek -> %d ns' % seek_ns)
         cls.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
 
     @classmethod
