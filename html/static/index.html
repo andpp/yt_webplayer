@@ -284,6 +284,8 @@
 
   <script>
     var search_res_opt = {
+      multiDrag: true, // Enable multi-drag
+      selectedClass: 'list-group-item-info',
       group: 'shared', // set both lists to same group
       animation: 150,
       delay: 100,
@@ -474,7 +476,7 @@ function hide_all_popups() {
                     var vid = elem.id.substr(4)
                     var cls = "list-group-item"
                     if (elem.active) {
-                      cls += ' list-group-item-info'
+                      cls += ' list-group-item-success';
                     }
 
                     snippet += '<div class="' + cls + '" id="' + vid + '" ondblclick="do_dblclick(this)">'
@@ -615,7 +617,7 @@ function hide_all_popups() {
         // First 4 digits are number in playlist to distinct between two items with the same vid
         elem.id = pad4(playList.length) + e.id; 
         elem.txt = e.innerText;
-        elem.active = $(e).hasClass('list-group-item-info');
+        elem.active = $(e).hasClass('list-group-item-success');
         playList.push(elem);
     }
     ws.send(JSON.stringify({ cmd: "updatePlaylist", "uuid" : uuid, "pl" : playList}))
