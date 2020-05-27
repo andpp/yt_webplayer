@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" 
           integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
 
+    <!-- This is the base CSS theme for the APM Media Player -->
+    <link href="/APM/skin/apmplayer_base.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="/APM/skin/jquery-ui-slider.custom.css" type="text/css" media="all" />
+
     <style>
       .list-group-item {
         padding: 1px;
@@ -21,12 +25,6 @@
         height: auto;
         left: 15px;
         bottom:5px;        
-      }
-      .pull-btn-pos {
-        position: fixed;
-        top: 7px;
-        left: 340px;
-        height: 34px;
       }
       .ctrl-buttons {
         position:fixed;
@@ -43,6 +41,23 @@
         text-align: center;
         margin: -1px -15px 0 0;
     }
+    #apm_player_controls {left:10px;width:400px;} 
+    .volume.playtime #apm_player_bar_container {
+      width: 270px; /* 250px if volume enabled */
+      float: left;
+    }
+    .volume.playtime #apm_player_bar_wrapper {
+        width: 340px; /* 305px; if volume enabled */
+    }
+    .no-volume.playtime #apm_player_bar_container {
+        width: 272x;
+        float: left;
+        margin-right: 5px;
+    }
+    .no-volume.playtime #apm_player_bar_wrapper {
+        width: 327px;
+    }
+
     @media (max-width: 414px) {
       .media-width {
         top: 108px;
@@ -50,11 +65,16 @@
       .container-fluid {
         padding-left: 1px;
       }
-      .pull-btn-pos {
-         left:320px;
-      }
       .ctrl-buttons {
         left: -4px;
+      }
+      #apm_player_controls {left:10px;width:390px;} 
+      .volume.playtime #apm_player_bar_container {
+        width: 260px; /* 240px if volume enabled */
+        float: left;
+      }
+      .volume.playtime #apm_player_bar_wrapper {
+          width: 330px; /* 295px if volume enabled */
       }
     }
       
@@ -62,10 +82,6 @@
 
   <script type="text/javascript" src="/js/reconnecting-websocket.min.js"></script>
   <script type="text/javascript" src="/js/Sortable.min.js"></script>
-
-  <!-- This is the base CSS theme for the APM Media Player -->
-  <link href="/APM/skin/apmplayer_base.css" rel="stylesheet" type="text/css" />
-  <link rel="stylesheet" href="/APM/skin/jquery-ui-slider.custom.css" type="text/css" media="all" />
 
   <!--script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script-->
   <!--script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script-->
@@ -120,19 +136,19 @@
 
     <div id="apm_media_wrapper" class="clearfix preroll-inactive" style="width:auto;">
       <div id="apm_player_status" class="rounded box" style="margin-top: unset;"></div>
-      <div id="apm_player_controls" class="volume playtime" style="left:10px;width:400px;">
+      <div id="apm_player_controls" class="volume playtime">
           <div id="apm_player_toggle">
               <div id="apm_player_play" class="player-toggle hide-text">Play</div>
               <div id="apm_player_pause" class="player-toggle hide-text">Pause</div>
-              <div id="apm_player_bar_wrapper" style="width:305px;">
-                  <div id="apm_player_bar_container" class="rounded" style="width: 250px;">
+              <div id="apm_player_bar_wrapper">
+                  <div id="apm_player_bar_container" class="rounded">
                       <div id="apm_player_bar">
                           <div id="apm_player_loading" class="rounded4"></div>
                       </div>
                   </div>
                   <div class="apm_player_playtime" id="my_apm_player_playtime">Stopped</div>
               </div>
-              <div id="apm_player_volume_wrapper">
+              <!-- <div id="apm_player_volume_wrapper">
                   <div id="apm_player_volume_status">
                   </div>
                   <div id="apm_player_volume_slider_wrapper">
@@ -141,16 +157,12 @@
                           </div>
                       </div>
                   </div>
-              </div>
+              </div> -->
           </div>
       </div>
     </div>
     <!-- END Player Container -->
-
-    <!-- <div class="pull-btn-pos input-group-prepend">
-      <button id=btn_pull class="btn btn-info" type="button" data-toggle="modal" data-target="#pullPLaylistDialog">Pull list</button>
-    </div> -->
-    
+   
     <div class="ctrl-buttons btn-group" role="group">
       <button id=btn_search class="btn btn-primary" type="button" data-toggle="modal" data-target="#searchDialog" onclick="hide_all_popups()">Search</button>
       <button id=btn_play class="btn btn-success" type="button" onclick="do_play_playList()">Play</button>
