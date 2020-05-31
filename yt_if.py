@@ -118,7 +118,7 @@ class YT:
         _, cls.vinfo.position = pipeline.query_position(Gst.Format.TIME)
         if cls.vinfo.position == -1:
             cls.lock.release()
-            return False
+            return True
         _, cls.vinfo.duration = pipeline.query_duration(Gst.Format.TIME)
         # print("\rPosition: %s of %s" % (Gst.TIME_ARGS(position).split('.',1)[0], 
         #                 Gst.TIME_ARGS(duration).split('.',1)[0]), end ="")

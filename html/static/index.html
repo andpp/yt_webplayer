@@ -284,18 +284,19 @@
 
   <script>
     var search_res_opt = {
-      multiDrag: true, // Enable multi-drag
+      multiDrag: false, // Enable multi-drag
+      multiDragKey: 'ctrl',
       selectedClass: 'list-group-item-info',
       group: 'shared', // set both lists to same group
       animation: 150,
-      delay: 100,
+      delay: 125,
       delayOnTouchOnly : true,
-      touchStartThreshold: 4,
-      fallbackTolerance: 4,
+      touchStartThreshold: 3,
+      fallbackTolerance: 3,
     };
     var playlist_opt = {...search_res_opt};
     playlist_opt.onChange=function(evt) {
-       playList_update()
+       playList_update();
     };
 
     new Sortable(search_res, search_res_opt);
@@ -725,7 +726,7 @@ function hide_all_popups() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous" onerror="cdnfailover|=2"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous" onerror="cdnfailover|=4"></script>
 <script>
-(cdnfailover&1)&&document.write('<script src="/js/jquery-3.2.1.slim.min.js"><\/script>'); 
+// (cdnfailover&1)&&document.write('<script src="/js/jquery-3.2.1.slim.min.js"><\/script>'); 
 (cdnfailover&2)&&document.write('<script src="/js/popper.min.js"><\/script>'); 
 (cdnfailover&4)&&document.write('<script src="/js/4.0.0/bootstrap.min.js"><\/script>'); 
 cdnfailover=0;
