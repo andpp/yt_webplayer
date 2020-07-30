@@ -373,12 +373,16 @@ class YTSocketHandler(tornado.websocket.WebSocketHandler):
         origin = origin.lower()
 
         if g.domain != "":
-            host = g.domain
+            res = re.match(g.domain, origin) is not None
         else:
-            host = self.request.headers.get("Host")
+            res = origin == self.request.headers.get("Host")
 
-        # Check to see that origin matches host directly, including ports
-        return origin == host
+        if not res:
+            logging.error("Invalid origin: %s" % origin)
+            return False
+        else:
+            return True
+
 
     def on_message(self, message):
         logging.debug("got message %r", message)
